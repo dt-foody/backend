@@ -1,0 +1,16 @@
+module.exports.authController = require('./auth.controller');
+module.exports.userController = require('./user.controller');
+module.exports.categoryController = require('./category.controller');
+module.exports.productController = require('./product.controller');
+module.exports.comboController = require('./combo.controller');
+module.exports.permissionController = require('./permission.controller');
+module.exports.roleController = require('./role.controller');
+module.exports.customerController = require('./customer.controller');
+module.exports.employeeController = require('./employee.controller');
+module.exports.orderController = require('./order.controller');
+module.exports.couponController = require('./coupon.controller');
+module.exports.voucherController = require('./voucher.controller');
+module.exports.pricePromotionController = require('./pricePromotion.controller');
+module.exports.blogPostController = require('./blogPost.controller');
+module.exports.blogCategoryController = require('./blogCategory.controller');
+module.exports.blogTagController = require('./blogTag.controller');

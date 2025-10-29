@@ -1,0 +1,17 @@
+module.exports.Token = require('./token.model');
+module.exports.User = require('./user.model');
+module.exports.Category = require('./category.model');
+module.exports.Product = require('./product.model');
+module.exports.Combo = require('./combo.model');
+module.exports.Permission = require('./permission.model');
+module.exports.Role = require('./role.model');
+module.exports.Permission = require('./permission.model');
+module.exports.Customer = require('./customer.model');
+module.exports.Employee = require('./employee.model');
+module.exports.Order = require('./order.model');
+module.exports.Coupon = require('./coupon.model');
+module.exports.Voucher = require('./voucher.model');
+module.exports.PricePromotion = require('./pricePromotion.model');
+module.exports.BlogPost = require('./blogPost.model');
+module.exports.BlogCategory = require('./blogCategory.model');
+module.exports.BlogTag = require('./blogTag.model');
