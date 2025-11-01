@@ -9,10 +9,15 @@ const pricePromotionRoute = require('./pricePromotion.route');
 const blogPostRoute = require('./blogPost.route');
 const blogTagRoute = require('./blogTag.route');
 const blogCategoryRoute = require('./blogCategory.route');
+const authRoute = require('../auth.route');
 
 const router = express.Router();
 
 const defaultRoutes = [
+  {
+    path: '/auth',
+    route: authRoute,
+  },
   {
     path: '/categories',
     route: categoryRoute,

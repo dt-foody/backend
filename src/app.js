@@ -72,8 +72,8 @@ if (config.env === 'production') {
 }
 
 // v1 api routes
-app.use('/v1', routes);
-app.use('/v1/public', routesPublic);
+app.use('/v1', routesPublic);
+app.use('/v1/admin', routes);
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // send back a 404 error for any unknown api request

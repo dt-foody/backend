@@ -84,9 +84,6 @@ const queryMiddleware = (req, res, next) => {
     req.options.select = select;
   }
 
-  console.log('req.query', req.query);
-  console.log('req.options', req.options);
-
   next();
 };
 

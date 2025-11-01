@@ -21,7 +21,6 @@ class CouponController extends BaseController {
       ]
     });
 
-    console.log("coupons", coupons);
     return res.status(OK).json(coupons);
   }
 }

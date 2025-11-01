@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { authService, userService, tokenService, emailService } = require('../services');
+const { authService, customerService, employeeService, tokenService, emailService } = require('../services');
 const { getEffectivePermissions } = require('../utils/permission');
 
 const register = catchAsync(async (req, res) => {
@@ -53,29 +53,58 @@ const login = catchAsync(async (req, res) => {
 
   const permissions = await getEffectivePermissions(user);
 
+  const isProd = false; // process.env.NODE_ENV === 'production';
+
   res.cookie('accessToken', tokens.access.token, {
     httpOnly: true,
-    secure: true, // Chỉ gửi qua HTTPS
-    sameSite: 'strict', // Chống tấn công CSRF
-    maxAge: 1800000 // 30 phút (nên dùng 1800000 cho 30 phút)
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 1800000, // 30 phút (nên dùng 1800000 cho 30 phút)
   });
 
   res.cookie('refreshToken', tokens.refresh.token, {
     httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
     path: '/api/auth/refresh', // Chỉ gửi cookie này đến đúng endpoint refresh
     maxAge: 604800000 // 7 ngày
   });
 
+  let me;
+  if (user.role === 'customer') {
+    me = await customerService.findOne({ user: user.id || user._id });
+  } else {
+    me = await employeeService.findOne({ user: user.id || user._id });
+  }
+
   // Gửi về thông tin user và permissions. 
   // KHÔNG nên gửi 'tokens' về client vì đã dùng HttpOnly cookie.
-  res.send({ user, permissions, tokens }); 
+  res.send({ user, me, permissions, tokens }); 
 });
 
 const logout = catchAsync(async (req, res) => {
-  await authService.logout(req.body.refreshToken);
-  res.status(httpStatus.NO_CONTENT).send();
+  if (req.body.refreshToken) {
+    await authService.logout(req.body.refreshToken);
+  }
+
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // 2. Clear accessToken
+  res.clearCookie('accessToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'none',
+  });
+
+  // 3. Clear refreshToken
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'strict' : 'none',
+    path: '/api/auth/refresh' // ⚡ QUAN TRỌNG: Phải khớp chính xác
+  });
+
+  res.status(httpStatus.OK).send({ status: true });
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
@@ -107,10 +136,18 @@ const verifyEmail = catchAsync(async (req, res) => {
 
 const getMe = catchAsync(async (req, res) => {
   const { user } = req;
+
+  if (user.role === 'customer') {
+    me = await customerService.findOne({ user: user.id || user._id });
+  } else {
+    me = await employeeService.findOne({ user: user.id || user._id });
+  }
+  
   const permissions = await getEffectivePermissions(user);
 
   res.status(httpStatus.OK).send({
-    ...user.toJSON(),
+    user,
+    me,
     permissions
   });
 });
