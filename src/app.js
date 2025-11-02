@@ -46,7 +46,9 @@ app.use(compression());
 const allowedOrigins = [
   'http://localhost:3001',       // (Dev) Thay bằng port Next.js của bạn
   'http://localhost:4200',       // (Dev) Thay bằng port Next.js của bạn
-  'https://trangwebcuaban.com'  // (Prod) Thay bằng domain của bạn
+  'https://trangwebcuaban.com',  // (Prod) Thay bằng domain của bạn
+  'http://localhost:3000', 
+  'http://localhost:4000', 
 ];
 
 // 2. Cấu hình
