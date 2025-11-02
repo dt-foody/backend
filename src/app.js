@@ -44,17 +44,23 @@ app.use(compression());
 
 // 1. Danh sách các origin được phép
 const allowedOrigins = [
-  'http://localhost:3001',       // (Dev) Thay bằng port Next.js của bạn
-  'http://localhost:4200',       // (Dev) Thay bằng port Next.js của bạn
-  'https://trangwebcuaban.com',  // (Prod) Thay bằng domain của bạn
+  'http://localhost:3001',       
+  'http://localhost:4200',     
+  'https://trangwebcuaban.com', 
   'http://localhost:3000', 
-  'http://localhost:4000', 
+  'http://localhost:4000'
 ];
 
-// 2. Cấu hình
 const corsOptions = {
-  origin: allowedOrigins, // Dùng mảng ở đây
-  credentials: true,      // Bắt buộc
+  // origin: (origin, callback) => {
+  //   if (!origin || allowedOrigins.includes(origin)) {
+  //     callback(null, true);
+  //   } else {
+  //     callback(new Error('Not allowed by CORS'));
+  //   }
+  // },
+  origin: allowedOrigins,
+  credentials: true,
 };
 
 // 3. Áp dụng

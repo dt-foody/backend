@@ -32,11 +32,9 @@ const login = catchAsync(async (req, res) => {
   const hostname = req.hostname;
 
   // 2. Kiểm tra xem đây có phải là subdomain 'admin' không
-  // Dùng startsWith để hoạt động cho cả 'admin.localhost' và 'admin.yourdomain.com'
   const isAdminSubdomain = hostname.startsWith('admin');
 
   // 3. Kiểm tra điều kiện: (Role là 'customer' HOẶC role là 'user') VÀ đang ở trang admin
-  // (Tôi giả sử role là 'customer' hoặc 'user', bạn hãy điều chỉnh cho đúng)
   const isForbidden = (user.role === 'customer') && isAdminSubdomain;
 
   if (isForbidden) {
@@ -45,29 +43,28 @@ const login = catchAsync(async (req, res) => {
       message: 'Tài khoản của bạn không có quyền truy cập vào trang quản trị.',
     });
   }
-  
-  // --- KẾT THÚC LOGIC MỚI ---
 
   // Nếu qua được kiểm tra, mới tiếp tục tạo token và set cookie
   const tokens = await tokenService.generateAuthTokens(user);
 
   const permissions = await getEffectivePermissions(user);
 
-  const isProd = false; // process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
 
   res.cookie('accessToken', tokens.access.token, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
-    maxAge: 1800000, // 30 phút (nên dùng 1800000 cho 30 phút)
+    secure: isProduction, // Chỉ bật khi production
+    sameSite: isProduction ? 'none' : 'lax', // 'none' khi có cross-site (production)
+    maxAge: 30 * 60 * 1000, // 30 phút
+    path: '/', // Mặc định gửi mọi request
   });
 
   res.cookie('refreshToken', tokens.refresh.token, {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
-    path: '/api/auth/refresh', // Chỉ gửi cookie này đến đúng endpoint refresh
-    maxAge: 604800000 // 7 ngày
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/api/auth/refresh',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
   });
 
   let me;
@@ -78,7 +75,6 @@ const login = catchAsync(async (req, res) => {
   }
 
   // Gửi về thông tin user và permissions. 
-  // KHÔNG nên gửi 'tokens' về client vì đã dùng HttpOnly cookie.
   res.send({ user, me, permissions, tokens }); 
 });
 
@@ -87,21 +83,22 @@ const logout = catchAsync(async (req, res) => {
     await authService.logout(req.body.refreshToken);
   }
 
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  // 2. Clear accessToken
+  // 🔹 Xóa accessToken
   res.clearCookie('accessToken', {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'strict' : 'none',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/', // phải giống lúc set
   });
 
-  // 3. Clear refreshToken
+  // 🔹 Xóa refreshToken
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? 'strict' : 'none',
-    path: '/api/auth/refresh' // ⚡ QUAN TRỌNG: Phải khớp chính xác
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/api/auth/refresh', // phải giống lúc set
   });
 
   res.status(httpStatus.OK).send({ status: true });
