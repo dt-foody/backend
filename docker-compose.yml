@@ -5,8 +5,7 @@ services:
     build: .
     image: node-app
     environment:
-      - MONGODB_URL=mongodb+srv://nguyentoan102002:VKFnOfN7{cdSKII+@cluster0.ebpye6g.mongodb.net/food-order?appName=Cluster0
-
+      - MONGODB_URL=mongodb://mongodb:27017/node-boilerplate
     ports:
       - '3000:3000'
     depends_on:

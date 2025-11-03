@@ -48,7 +48,8 @@ const allowedOrigins = [
   'http://localhost:4200',     
   'https://trangwebcuaban.com', 
   'http://localhost:3000', 
-  'http://localhost:4000'
+  'http://localhost:4000',
+  'https://foody-user.vercel.app',
 ];
 
 const corsOptions = {
