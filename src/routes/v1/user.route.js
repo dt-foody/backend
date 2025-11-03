@@ -48,7 +48,7 @@ class UserRoute extends BaseRoute {
     );
 
     // Thêm route tùy chỉnh cho changePassword
-    this.addCustomRoutes();
+    // this.addCustomRoutes();
   }
 }
 

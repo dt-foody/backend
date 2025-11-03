@@ -1,7 +1,9 @@
+const httpStatus = require('http-status');
 const BaseController = require('../utils/_base.controller');
 const { userService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
 
+const { OK } = httpStatus;
 class UserController extends BaseController {
   constructor() {
     super(userService);
@@ -14,8 +16,8 @@ class UserController extends BaseController {
 
     const { currentPassword, newPassword } = req.body;
 
-    const result = await this.service.changePassword(userId, currentPassword, newPassword);
-    return res.status(200).json({ message: 'Password changed', tokenVersion: result.tokenVersion });
+    await this.service.changePassword(userId, currentPassword, newPassword);
+    return res.status(OK).json({ message: 'Password changed' });
   }
 }
 
