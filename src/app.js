@@ -44,9 +44,11 @@ app.use(compression());
 
 // 1. Danh sách các origin được phép
 const allowedOrigins = [
-  'http://localhost:3001',
-  'http://localhost:4200',
-  'https://trangwebcuaban.com'
+  'http://localhost:3001',       
+  'http://localhost:4200',     
+  'https://trangwebcuaban.com', 
+  'http://localhost:3000', 
+  'http://localhost:4000'
 ];
 
 const corsOptions = {
@@ -57,7 +59,7 @@ const corsOptions = {
   //     callback(new Error('Not allowed by CORS'));
   //   }
   // },
-  origin: 'http://localhost:3001',
+  origin: allowedOrigins,
   credentials: true,
 };
 
