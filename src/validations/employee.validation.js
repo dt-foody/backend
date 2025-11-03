@@ -8,7 +8,6 @@ const addressSchema = Joi.object().keys({
   recipientPhone: Joi.string().required().trim(),
   street: Joi.string().required().trim(),
   ward: Joi.string().required().trim(),
-  district: Joi.string().required().trim(),
   city: Joi.string().required().trim(),
   fullAddress: Joi.string().allow('', null),
   location: Joi.object()

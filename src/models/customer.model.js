@@ -20,12 +20,12 @@ const CustomerSchema = new Schema(
     // --- ĐỊA CHỈ GIAO HÀNG ---
     addresses: [
       {
+        _id: false,
         label: { type: String },
         recipientName: { type: String, required: true },
         recipientPhone: { type: String, required: true },
         street: { type: String, required: true },
         ward: { type: String, required: true },
-        district: { type: String, required: true },
         city: { type: String, required: true },
         fullAddress: { type: String },
         location: {

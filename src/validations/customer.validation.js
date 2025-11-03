@@ -8,13 +8,12 @@ const addressSchema = Joi.object().keys({
   recipientPhone: Joi.string().required().trim(),
   street: Joi.string().required().trim(),
   ward: Joi.string().required().trim(),
-  district: Joi.string().required().trim(),
   city: Joi.string().required().trim(),
   fullAddress: Joi.string().allow('', null),
   location: Joi.object()
     .keys({
       type: Joi.string().valid('Point').default('Point'),
-      coordinates: Joi.array().length(2).items(Joi.number()).required(), // [lng, lat]
+      coordinates: Joi.array(), //.length(2).items(Joi.number()).required(), // [lng, lat]
     })
     .optional(),
   isDefault: Joi.boolean().default(false),
@@ -62,13 +61,25 @@ const updateById = {
   }),
   body: Joi.object()
     .keys({
-      email: Joi.string().email().trim().lowercase(),
       name: Joi.string().trim(),
       phone: Joi.string().trim(),
       gender: Joi.string().valid('male', 'female', 'other'),
       birthDate: Joi.date(),
       addresses: Joi.array().items(addressSchema),
       isActive: Joi.boolean(),
+    })
+    .min(1),
+};
+
+// update
+const updateProfile = {
+  body: Joi.object()
+    .keys({
+      name: Joi.string().trim(),
+      phone: Joi.string().trim(),
+      gender: Joi.string().valid('male', 'female', 'other'),
+      birthDate: Joi.date(),
+      addresses: Joi.array().items(addressSchema),
     })
     .min(1),
 };
@@ -104,4 +115,7 @@ module.exports = {
   updateById,
   deleteById,
   deleteManyById,
+
+  // public
+  updateProfile,
 };

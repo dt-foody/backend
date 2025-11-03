@@ -46,8 +46,5 @@ function paginate(req, res, next) {
         ];
     }
 
-    console.log('Final Query:', req.query);
-    console.log('Final options:', req.options);
-
     next();
 }
