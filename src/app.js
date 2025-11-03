@@ -46,10 +46,10 @@ app.use(compression());
 const allowedOrigins = [
   'http://localhost:3001',       
   'http://localhost:4200',     
-  'https://trangwebcuaban.com', 
   'http://localhost:3000', 
   'http://localhost:4000',
   'https://foody-user.vercel.app',
+  "https://web-admin-sandy.vercel.app/",
 ];
 
 const corsOptions = {
