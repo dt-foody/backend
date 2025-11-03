@@ -2,6 +2,7 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { authService, customerService, employeeService, tokenService, emailService } = require('../services');
 const { getEffectivePermissions } = require('../utils/permission');
+const config = require('../config/config');
 
 const register = catchAsync(async (req, res) => {
   // 1. Xác định subdomain
@@ -32,7 +33,7 @@ const login = catchAsync(async (req, res) => {
   const { hostname } = req;
 
   // 2. Kiểm tra xem đây có phải là subdomain 'admin' không
-  const isAdminSubdomain = hostname.startsWith('admin');
+  const isAdminSubdomain = hostname.startsWith('admin') || hostname.startsWith('web-admin-sandy');
 
   // 3. Kiểm tra điều kiện: (Role là 'customer' HOẶC role là 'user') VÀ đang ở trang admin
   const isForbidden = user.role === 'customer' && isAdminSubdomain;
@@ -49,7 +50,7 @@ const login = catchAsync(async (req, res) => {
 
   const permissions = await getEffectivePermissions(user);
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = config.env === 'production';
 
   res.cookie('accessToken', tokens.access.token, {
     httpOnly: true,
@@ -83,7 +84,7 @@ const logout = catchAsync(async (req, res) => {
     await authService.logout(req.body.refreshToken);
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = config.env === 'production';
 
   // 🔹 Xóa accessToken
   res.clearCookie('accessToken', {
@@ -134,6 +135,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 const getMe = catchAsync(async (req, res) => {
   const { user } = req;
 
+  let me;
   if (user.role === 'customer') {
     me = await customerService.findOne({ user: user.id || user._id });
   } else {

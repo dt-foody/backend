@@ -7,8 +7,6 @@ function customExtractor(req) {
   // 1) Ưu tiên lấy Bearer token
   const authToken = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
-  console.log('req.cookies.accessToken', req.cookies && req.cookies.accessToken);
-  console.log('authToken', authToken);
   if (authToken) return authToken;
 
   // 2) Không có thì lấy từ cookie

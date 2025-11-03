@@ -1,5 +1,5 @@
-const BaseService = require('../utils/_base.service.js');
-const { Permission } = require('../models/index.js');
+const BaseService = require('../utils/_base.service');
+const { Permission } = require('../models');
 
 class PermissionService extends BaseService {
   constructor() {

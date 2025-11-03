@@ -1,5 +1,5 @@
-const BaseController = require('../utils/_base.controller.js');
-const { comboService } = require('../services/index.js');
+const BaseController = require('../utils/_base.controller');
+const { comboService } = require('../services');
 
 class ComboController extends BaseController {
   constructor() {

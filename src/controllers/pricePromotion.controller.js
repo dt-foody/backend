@@ -1,5 +1,5 @@
-const BaseController = require('../utils/_base.controller.js');
-const { pricePromotionService } = require('../services/index.js');
+const BaseController = require('../utils/_base.controller');
+const { pricePromotionService } = require('../services');
 
 class PricePromotionController extends BaseController {
   constructor() {

@@ -1,5 +1,5 @@
-const BaseService = require('../utils/_base.service.js');
-const { BlogPost } = require('../models/index.js');
+const BaseService = require('../utils/_base.service');
+const { BlogPost } = require('../models');
 
 class BlogPostService extends BaseService {
   constructor() {

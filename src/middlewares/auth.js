@@ -1,23 +1,25 @@
 const passport = require('passport');
 const httpStatus = require('http-status');
 const ApiError = require('../utils/ApiError');
+// eslint-disable-next-line no-unused-vars
 const { roleRights } = require('../config/roles');
 
+// eslint-disable-next-line no-unused-vars
 const verifyCallback = (req, resolve, reject, requiredRights) => async (err, user, info) => {
   if (err || info || !user) {
     return reject(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
   }
   req.user = user;
   return resolve();
-  if (requiredRights.length) {
-    const userRights = roleRights.get(user.role);
-    const hasRequiredRights = requiredRights.every((requiredRight) => userRights.includes(requiredRight));
-    if (!hasRequiredRights && req.params.userId !== user.id) {
-      return reject(new ApiError(httpStatus.FORBIDDEN, 'Forbidden'));
-    }
-  }
+  // if (requiredRights.length) {
+  //   const userRights = roleRights.get(user.role);
+  //   const hasRequiredRights = requiredRights.every((requiredRight) => userRights.includes(requiredRight));
+  //   if (!hasRequiredRights && req.params.userId !== user.id) {
+  //     return reject(new ApiError(httpStatus.FORBIDDEN, 'Forbidden'));
+  //   }
+  // }
 
-  resolve();
+  // resolve();
 };
 
 const auth =

@@ -77,6 +77,13 @@ const deleteManyById = {
   }),
 };
 
+const changePassword = {
+  body: Joi.object().keys({
+    password: Joi.string().custom(password).required(),
+    newPassword: Joi.string().custom(password).required(),
+  }),
+};
+
 module.exports = {
   create,
   paginate,
@@ -84,4 +91,5 @@ module.exports = {
   updateById,
   deleteById,
   deleteManyById,
+  changePassword,
 };

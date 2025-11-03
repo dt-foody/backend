@@ -1,5 +1,5 @@
-const BaseService = require('../utils/_base.service.js');
-const { Combo } = require('../models/index.js');
+const BaseService = require('../utils/_base.service');
+const { Combo } = require('../models');
 
 class ComboService extends BaseService {
   constructor() {

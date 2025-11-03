@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
-const BaseController = require('../utils/_base.controller.js');
-const { customerService } = require('../services/index.js');
+const BaseController = require('../utils/_base.controller');
+const { customerService } = require('../services');
 
 const { OK } = httpStatus;
 

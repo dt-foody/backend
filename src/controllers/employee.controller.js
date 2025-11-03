@@ -1,5 +1,5 @@
-const BaseController = require('../utils/_base.controller.js');
-const { employeeService } = require('../services/index.js');
+const BaseController = require('../utils/_base.controller');
+const { employeeService } = require('../services');
 
 class EmployeeController extends BaseController {
   constructor() {

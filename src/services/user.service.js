@@ -1,5 +1,5 @@
-const BaseService = require('../utils/_base.service.js');
-const { User } = require('../models/index.js');
+const BaseService = require('../utils/_base.service');
+const { User } = require('../models');
 
 class UserService extends BaseService {
   constructor() {
@@ -16,7 +16,7 @@ class UserService extends BaseService {
   async changePassword(userId, currentPassword, newPassword) {
     // Lấy user kèm password (vì toJSON plugin ẩn password)
     const user = await this.model.findById(userId).select('+password');
-    
+
     if (!user) {
       throw new Error('USER_NOT_FOUND');
     }
@@ -33,15 +33,9 @@ class UserService extends BaseService {
       throw new Error('PASSWORD_REUSED');
     }
 
-    // Tăng tokenVersion
-    const nextTokenVersion = (user.tokenVersion ?? 0) + 1;
-
     // Cập nhật password - middleware pre('save') sẽ tự hash
     user.password = newPassword;
-    user.tokenVersion = nextTokenVersion;
     await user.save();
-
-    return { ok: true, tokenVersion: nextTokenVersion };
   }
 }
 

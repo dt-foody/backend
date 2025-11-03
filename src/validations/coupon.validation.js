@@ -1,4 +1,4 @@
-// coupon.validation.js
+// coupon.validation
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 

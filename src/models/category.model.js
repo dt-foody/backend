@@ -77,7 +77,7 @@ CategorySchema.pre(['updateOne', 'findOneAndUpdate'], { document: false, query: 
   next();
 });
 
-CategorySchema.post(['updateOne', 'findOneAndUpdate'], { document: false, query: true }, async function (res) {
+CategorySchema.post(['updateOne', 'findOneAndUpdate'], { document: false, query: true }, async function () {
   const { model } = this;
   const before = this._categoryBefore;
   const update = this._updateData;

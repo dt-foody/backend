@@ -2,6 +2,7 @@ const BaseRoute = require('../../utils/_base.route');
 const { userController } = require('../../controllers/index');
 const { userValidation } = require('../../validations/index');
 const auth = require('../../middlewares/auth'); // Import auth middleware
+const validate = require('../../middlewares/validate');
 
 function list(req, res, next) {
   next();
@@ -39,18 +40,15 @@ class UserRoute extends BaseRoute {
     };
     super(userController, userValidation, 'user', middlewares);
 
+    this.router.post(
+      '/change-password',
+      auth(),
+      validate(userValidation.changePassword),
+      this.controller.changePassword.bind(this.controller)
+    );
+
     // Thêm route tùy chỉnh cho changePassword
     this.addCustomRoutes();
-  }
-
-  addCustomRoutes() {
-    // POST /api/users/me/change-password
-    this.router.post(
-      '/me/change-password',
-      auth(), // Middleware xác thực (đảm bảo user đã đăng nhập)
-      // userValidation.changePassword, // Nếu có validation
-      userController.changePassword.bind(userController)
-    );
   }
 }
 

@@ -1,7 +1,7 @@
 const httpStatus = require('http-status');
 const he = require('he');
-const BaseController = require('../utils/_base.controller.js');
-const { blogTagService } = require('../services/index.js');
+const BaseController = require('../utils/_base.controller');
+const { blogTagService } = require('../services');
 
 const { OK } = httpStatus;
 
