@@ -1,7 +1,8 @@
 // models/pricePromotion.model.js
 const mongoose = require('mongoose');
+
 const { Schema } = mongoose;
-const { toJSON, paginate } = require('./plugins/index.js');
+const { toJSON, paginate } = require('./plugins');
 
 const PricePromotionSchema = new Schema(
   {
@@ -31,7 +32,7 @@ const PricePromotionSchema = new Schema(
     // Số lần tối đa được sử dụng trong 1 ngày
     dailyMaxUses: { type: Number, default: 0 },
     // Lưu trữ ngày cuối cùng coupon được dùng
-    lastUsedDate: { type: Date }, 
+    lastUsedDate: { type: Date },
     // Số lần đã dùng trong ngày hiện tại
     dailyUsedCount: { type: Number, default: 0 },
 

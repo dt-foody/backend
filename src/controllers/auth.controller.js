@@ -7,8 +7,8 @@ const register = catchAsync(async (req, res) => {
   // 1. Xác định subdomain
   // Giả sử req.hostname là 'admin.yourdomain.com' hoặc 'app.yourdomain.com'
   const parts = req.hostname.split('.');
-  const subdomain = parts[0]; 
-  
+  const subdomain = parts[0];
+
   // (Cách khác): Nếu bạn có một middleware riêng để xử lý subdomain:
   // const subdomain = req.subdomain;
 
@@ -29,13 +29,13 @@ const login = catchAsync(async (req, res) => {
 
   // 1. Lấy hostname từ request (ví dụ: 'admin.domain.com' hoặc 'localhost')
   // req.hostname sẽ tự động bỏ port (ví dụ :3000)
-  const hostname = req.hostname;
+  const { hostname } = req;
 
   // 2. Kiểm tra xem đây có phải là subdomain 'admin' không
   const isAdminSubdomain = hostname.startsWith('admin');
 
   // 3. Kiểm tra điều kiện: (Role là 'customer' HOẶC role là 'user') VÀ đang ở trang admin
-  const isForbidden = (user.role === 'customer') && isAdminSubdomain;
+  const isForbidden = user.role === 'customer' && isAdminSubdomain;
 
   if (isForbidden) {
     // 4. Trả về 403 Forbidden. KHÔNG tạo token, KHÔNG set cookie.
@@ -74,8 +74,8 @@ const login = catchAsync(async (req, res) => {
     me = await employeeService.findOne({ user: user.id || user._id });
   }
 
-  // Gửi về thông tin user và permissions. 
-  res.send({ user, me, permissions, tokens }); 
+  // Gửi về thông tin user và permissions.
+  res.send({ user, me, permissions, tokens });
 });
 
 const logout = catchAsync(async (req, res) => {
@@ -139,13 +139,13 @@ const getMe = catchAsync(async (req, res) => {
   } else {
     me = await employeeService.findOne({ user: user.id || user._id });
   }
-  
+
   const permissions = await getEffectivePermissions(user);
 
   res.status(httpStatus.OK).send({
     user,
     me,
-    permissions
+    permissions,
   });
 });
 

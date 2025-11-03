@@ -1,11 +1,11 @@
 // models/order.model.ts
 const mongoose = require('mongoose');
+
 const { Schema } = mongoose;
 
 const Counter = require('./counter.model');
 
-const { toJSON, paginate } = require('./plugins/index.js');
-
+const { toJSON, paginate } = require('./plugins');
 
 const OrderItemSchema = new Schema({
   product: { type: Schema.Types.ObjectId, ref: 'Product' },
@@ -68,7 +68,6 @@ OrderSchema.pre('save', async function (next) {
   }
   next();
 });
-
 
 OrderSchema.plugin(toJSON);
 OrderSchema.plugin(paginate);

@@ -1,7 +1,7 @@
 const { Router } = require('express');
-const auth = require('../middlewares/auth.js');
-const queryMiddleware = require('../middlewares/queryMiddleware.js');
-const validate = require('../middlewares/validate.js');
+const auth = require('../middlewares/auth');
+const queryMiddleware = require('../middlewares/queryMiddleware');
+const validate = require('../middlewares/validate');
 
 // CRUD
 class BaseRoute {

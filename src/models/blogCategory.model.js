@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
-const { toJSON, paginate } = require('./plugins/index.js');
+const { toJSON, paginate } = require('./plugins/index');
+
 const { Schema } = mongoose;
 
 const BlogCategorySchema = new Schema(
@@ -16,7 +17,8 @@ const BlogCategorySchema = new Schema(
       unique: true,
       index: true,
     },
-    description: { // Mô tả ngắn, tốt cho SEO trang danh mục
+    description: {
+      // Mô tả ngắn, tốt cho SEO trang danh mục
       type: String,
       default: '',
       trim: true,
@@ -31,11 +33,13 @@ const BlogCategorySchema = new Schema(
       default: '#212121', // Màu đen/xám rất đậm mặc định
       trim: true,
     },
-    coverImage: { // Ảnh đại diện cho danh mục
+    coverImage: {
+      // Ảnh đại diện cho danh mục
       type: String,
       default: '',
     },
-    postCount: { // Denormalization để tăng tốc query
+    postCount: {
+      // Denormalization để tăng tốc query
       type: Number,
       default: 0,
     },

@@ -1,6 +1,6 @@
 const express = require('express');
 // const docsRoute = require('./docs.route');
-const config = require('../../.././config/config');
+const config = require('../../../config/config');
 const categoryRoute = require('./category.route');
 const productRoute = require('./product.route');
 const comboRoute = require('./combo.route');
@@ -54,7 +54,7 @@ const defaultRoutes = [
   {
     path: '/customers',
     route: customerRoute,
-  }
+  },
 ];
 
 const devRoutes = [

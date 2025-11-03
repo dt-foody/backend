@@ -8,13 +8,11 @@ const router = express.Router();
 
 console.log(blogCategoryController.findBySlug); // nếu undefined thì chính là nguyên nhân
 
-
 router.get('/', validate(blogCategoryValidation.paginate), queryMiddleware, paginate, blogCategoryController.paginate);
 router.get('/:slug', queryMiddleware, blogCategoryController.findBySlug);
 
 module.exports = router;
 
-
 function paginate(req, res, next) {
-    next();
+  next();
 }

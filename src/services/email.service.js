@@ -23,13 +23,12 @@ const sendEmail = async (to, subject, text, html) => {
     from: config.email.from,
     to,
     subject,
-    text,   // có thể null nếu dùng html
-    html,   // thêm dòng này
+    text, // có thể null nếu dùng html
+    html, // thêm dòng này
   };
 
   await transport.sendMail(msg);
 };
-
 
 /**
  * Send reset password email
@@ -114,7 +113,9 @@ const sendVerificationEmail = async (to, token) => {
                       </tr>
                       <tr>
                         <td style="padding:8px 0;color:#607d8b;font-size:14px;">Ngày tạo:</td>
-                        <td style="padding:8px 0;color:#2c3e50;font-size:14px;font-weight:600;">${new Date().toLocaleDateString('vi-VN')}</td>
+                        <td style="padding:8px 0;color:#2c3e50;font-size:14px;font-weight:600;">${new Date().toLocaleDateString(
+                          'vi-VN'
+                        )}</td>
                       </tr>
                     </table>
                   </td>
@@ -249,7 +250,6 @@ const sendVerificationEmail = async (to, token) => {
 
   await sendEmail(to, subject, null, html);
 };
-
 
 module.exports = {
   transport,

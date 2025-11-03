@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
-const catchAsync = require('./catchAsync.js');
 const he = require('he');
+const catchAsync = require('./catchAsync');
 
 class BaseController {
   constructor(service) {
@@ -35,8 +35,7 @@ class BaseController {
 
     if (Array.isArray(data.results)) {
       data.results = data.results.map((item) => {
-        if (item.content) item.content = he.decode(item.content);
-        return item;
+        return item.content ? { ...item, content: he.decode(item.content) } : item;
       });
     }
 

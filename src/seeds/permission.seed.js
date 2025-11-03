@@ -51,11 +51,7 @@ async function seedPermissions() {
     console.log(`📋 Total permissions: ${permissions.length}`);
 
     for (const p of permissions) {
-      await Permission.updateOne(
-        { name: p.name },
-        { $set: p },
-        { upsert: true }
-      );
+      await Permission.updateOne({ name: p.name }, { $set: p }, { upsert: true });
       console.log(`✅ Upserted: ${p.name}`);
     }
 

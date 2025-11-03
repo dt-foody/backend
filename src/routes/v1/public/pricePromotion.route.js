@@ -2,7 +2,7 @@ const express = require('express');
 const validate = require('../../../middlewares/validate');
 const pricePromotionValidation = require('../../../validations/pricePromotion.validation');
 const pricePromotionController = require('../../../controllers/pricePromotion.controller');
-const queryMiddleware = require('../../../middlewares/queryMiddleware.js');
+const queryMiddleware = require('../../../middlewares/queryMiddleware');
 
 const router = express.Router();
 

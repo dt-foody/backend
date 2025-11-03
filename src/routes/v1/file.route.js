@@ -15,10 +15,10 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = path.extname(file.originalname);
     cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-  }
+  },
 });
 
 const upload = multer({ storage });
@@ -31,7 +31,7 @@ router.post('/upload', upload.single('file'), (req, res) => {
   const fileUrl = `/public/${req.file.filename}`;
   res.json({
     message: 'Upload successful',
-    url: fileUrl
+    url: fileUrl,
   });
 });
 

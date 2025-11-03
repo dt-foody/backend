@@ -29,9 +29,7 @@ const shippingSchema = Joi.object({
     district: Joi.string().required(),
     city: Joi.string().required(),
   }).required(),
-  status: Joi.string()
-    .valid('pending', 'delivering', 'delivered', 'failed')
-    .default('pending'),
+  status: Joi.string().valid('pending', 'delivering', 'delivered', 'failed').default('pending'),
 });
 
 // --- CREATE ORDER ---
@@ -62,14 +60,7 @@ const paginate = {
   query: Joi.object({
     search: Joi.string(),
     customer: Joi.string().custom(objectId),
-    status: Joi.string().valid(
-      'pending',
-      'confirmed',
-      'preparing',
-      'delivering',
-      'completed',
-      'canceled'
-    ),
+    status: Joi.string().valid('pending', 'confirmed', 'preparing', 'delivering', 'completed', 'canceled'),
     paymentStatus: Joi.string().valid('pending', 'paid', 'failed'),
     shippingStatus: Joi.string().valid('pending', 'delivering', 'delivered', 'failed'),
     startDate: Joi.date(),
@@ -102,14 +93,7 @@ const updateById = {
     grandTotal: Joi.number(),
     payment: paymentSchema,
     shipping: shippingSchema,
-    status: Joi.string().valid(
-      'pending',
-      'confirmed',
-      'preparing',
-      'delivering',
-      'completed',
-      'canceled'
-    ),
+    status: Joi.string().valid('pending', 'confirmed', 'preparing', 'delivering', 'completed', 'canceled'),
     note: Joi.string().allow('', null),
     createdBy: Joi.string().custom(objectId),
   }).min(1),
@@ -125,17 +109,7 @@ const deleteById = {
 // --- DELETE MANY BY IDS ---
 const deleteManyById = {
   params: Joi.object({
-    ids: Joi.string()
-      .custom((value, helpers) => {
-        const ids = value.split(',').map((id) => id.trim());
-        for (const id of ids) {
-          if (!objectId.isValid(id)) {
-            return helpers.message(`Invalid ID: ${id}`);
-          }
-        }
-        return value;
-      })
-      .required(),
+    ids: Joi.string().required(),
   }),
 };
 

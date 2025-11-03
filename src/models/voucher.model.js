@@ -1,13 +1,17 @@
 // models/Voucher.model.js
 const mongoose = require('mongoose');
+
 const { Schema } = mongoose;
 const { toJSON, paginate } = require('./plugins');
 
-const DiscountSnapshotSchema = new Schema({
-  type: { type: String, enum: ['fixed', 'percentage'], required: true },
-  value: { type: Number, required: true },
-  maxDiscount: { type: Number, default: 0 }
-}, { _id: false });
+const DiscountSnapshotSchema = new Schema(
+  {
+    type: { type: String, enum: ['fixed', 'percentage'], required: true },
+    value: { type: Number, required: true },
+    maxDiscount: { type: Number, default: 0 },
+  },
+  { _id: false }
+);
 
 const VoucherSchema = new Schema(
   {
@@ -23,14 +27,14 @@ const VoucherSchema = new Schema(
     issueMode: {
       type: String,
       enum: ['CLAIM', 'ADMIN', 'AUTO', 'REFERRAL'],
-      default: 'CLAIM'
+      default: 'CLAIM',
     },
 
     // --- Trạng thái ---
     status: {
       type: String,
       enum: ['UNUSED', 'USED', 'EXPIRED', 'REVOKED'],
-      default: 'UNUSED'
+      default: 'UNUSED',
     },
 
     issuedAt: { type: Date, default: Date.now },

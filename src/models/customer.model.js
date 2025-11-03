@@ -52,7 +52,6 @@ const CustomerSchema = new Schema(
   { timestamps: true }
 );
 
-
 // --- AUTO-INCREMENT customerId ---
 CustomerSchema.pre('save', async function (next) {
   const customer = this;

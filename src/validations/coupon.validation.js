@@ -1,40 +1,42 @@
 // coupon.validation.js
 const Joi = require('joi');
-const { objectId } = require('./custom.validation.js');
+const { objectId } = require('./custom.validation');
 
 const create = {
-  body: Joi.object().keys({
-    name: Joi.string().required(),
-    description: Joi.string().allow('', null),
-    code: Joi.string().allow('', null),
+  body: Joi.object()
+    .keys({
+      name: Joi.string().required(),
+      description: Joi.string().allow('', null),
+      code: Joi.string().allow('', null),
 
-    type: Joi.string().valid('discount_code', 'freeship', 'gift').default('discount_code'),
-    value: Joi.number().min(0).required(),
-    valueType: Joi.string().valid('fixed', 'percentage').default('fixed'),
-    maxDiscountAmount: Joi.number().min(0).default(0),
-    minOrderAmount: Joi.number().min(0).default(0),
+      type: Joi.string().valid('discount_code', 'freeship', 'gift').default('discount_code'),
+      value: Joi.number().min(0).required(),
+      valueType: Joi.string().valid('fixed', 'percentage').default('fixed'),
+      maxDiscountAmount: Joi.number().min(0).default(0),
+      minOrderAmount: Joi.number().min(0).default(0),
 
-    startDate: Joi.date().required(),
-    endDate: Joi.date().required(),
+      startDate: Joi.date().required(),
+      endDate: Joi.date().required(),
 
-    maxUses: Joi.number().min(0).default(0),
-    usedCount: Joi.number().min(0).default(0),
-    maxUsesPerUser: Joi.number().min(0).default(1),
+      maxUses: Joi.number().min(0).default(0),
+      usedCount: Joi.number().min(0).default(0),
+      maxUsesPerUser: Joi.number().min(0).default(1),
 
-    public: Joi.boolean().default(true),
-    claimable: Joi.boolean().default(false),
-    autoApply: Joi.boolean().default(false),
-    stackable: Joi.boolean().default(false),
+      public: Joi.boolean().default(true),
+      claimable: Joi.boolean().default(false),
+      autoApply: Joi.boolean().default(false),
+      stackable: Joi.boolean().default(false),
 
-    conditions: Joi.object().allow(null),
-    status: Joi.string().valid('DRAFT', 'ACTIVE', 'PAUSED', 'EXPIRED').default('ACTIVE'),
+      conditions: Joi.object().allow(null),
+      status: Joi.string().valid('DRAFT', 'ACTIVE', 'PAUSED', 'EXPIRED').default('ACTIVE'),
 
-    createdBy: Joi.string().custom(objectId),
-  }).when(Joi.object({ valueType: Joi.string().valid('percentage') }).unknown(), {
-    then: Joi.object({
-      maxDiscountAmount: Joi.number().min(1).required(),
+      createdBy: Joi.string().custom(objectId),
+    })
+    .when(Joi.object({ valueType: Joi.string().valid('percentage') }).unknown(), {
+      then: Joi.object({
+        maxDiscountAmount: Joi.number().min(1).required(),
+      }),
     }),
-  }),
 };
 
 const paginate = {
@@ -58,33 +60,35 @@ const updateById = {
   params: Joi.object().keys({
     id: Joi.required().custom(objectId),
   }),
-  body: Joi.object().keys({
-    name: Joi.string(),
-    description: Joi.string().allow('', null),
-    code: Joi.string().allow('', null),
-    type: Joi.string().valid('discount_code', 'freeship', 'gift'),
-    value: Joi.number().min(0),
-    valueType: Joi.string().valid('fixed', 'percentage'),
-    maxDiscountAmount: Joi.number().min(0),
-    minOrderAmount: Joi.number().min(0),
+  body: Joi.object()
+    .keys({
+      name: Joi.string(),
+      description: Joi.string().allow('', null),
+      code: Joi.string().allow('', null),
+      type: Joi.string().valid('discount_code', 'freeship', 'gift'),
+      value: Joi.number().min(0),
+      valueType: Joi.string().valid('fixed', 'percentage'),
+      maxDiscountAmount: Joi.number().min(0),
+      minOrderAmount: Joi.number().min(0),
 
-    startDate: Joi.date(),
-    endDate: Joi.date(),
+      startDate: Joi.date(),
+      endDate: Joi.date(),
 
-    maxUses: Joi.number().min(0),
-    usedCount: Joi.number().min(0),
-    maxUsesPerUser: Joi.number().min(0),
+      maxUses: Joi.number().min(0),
+      usedCount: Joi.number().min(0),
+      maxUsesPerUser: Joi.number().min(0),
 
-    public: Joi.boolean(),
-    claimable: Joi.boolean(),
-    autoApply: Joi.boolean(),
-    stackable: Joi.boolean(),
+      public: Joi.boolean(),
+      claimable: Joi.boolean(),
+      autoApply: Joi.boolean(),
+      stackable: Joi.boolean(),
 
-    conditions: Joi.object().allow(null),
-    status: Joi.string().valid('DRAFT', 'ACTIVE', 'PAUSED', 'EXPIRED'),
+      conditions: Joi.object().allow(null),
+      status: Joi.string().valid('DRAFT', 'ACTIVE', 'PAUSED', 'EXPIRED'),
 
-    createdBy: Joi.string().custom(objectId),
-  }).min(1),
+      createdBy: Joi.string().custom(objectId),
+    })
+    .min(1),
 };
 
 const deleteById = {

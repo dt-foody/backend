@@ -10,16 +10,16 @@ const config = require('../config/config');
 
 // Dữ liệu mẫu để trích xuất categories
 const posts = [
-  { categories: ["Ẩm thực", "Trải nghiệm"] },
-  { categories: ["Cà phê", "Địa điểm"] },
-  { categories: ["So sánh", "Công nghệ ẩm thực"] },
-  { categories: ["Cộng đồng", "Kinh nghiệm"] },
-  { categories: ["Ẩm thực", "Bình chọn"] },
-  { categories: ["Cộng đồng", "Câu chuyện thương hiệu"] },
-  { categories: ["Công nghệ", "Ẩm thực"] },
-  { categories: ["Trải nghiệm", "Công nghệ"] },
-  { categories: ["Ẩm thực", "Văn hóa"] },
-  { categories: ["Câu chuyện thương hiệu", "Phân tích"] }
+  { categories: ['Ẩm thực', 'Trải nghiệm'] },
+  { categories: ['Cà phê', 'Địa điểm'] },
+  { categories: ['So sánh', 'Công nghệ ẩm thực'] },
+  { categories: ['Cộng đồng', 'Kinh nghiệm'] },
+  { categories: ['Ẩm thực', 'Bình chọn'] },
+  { categories: ['Cộng đồng', 'Câu chuyện thương hiệu'] },
+  { categories: ['Công nghệ', 'Ẩm thực'] },
+  { categories: ['Trải nghiệm', 'Công nghệ'] },
+  { categories: ['Ẩm thực', 'Văn hóa'] },
+  { categories: ['Câu chuyện thương hiệu', 'Phân tích'] },
 ];
 
 async function seedBlogCategories() {
@@ -38,15 +38,15 @@ async function seedBlogCategories() {
 
     // Dùng Set để tự động loại bỏ các category trùng lặp
     const categoryNames = new Set();
-    posts.forEach(post => {
-      post.categories.forEach(catName => categoryNames.add(catName.trim()));
+    posts.forEach((post) => {
+      post.categories.forEach((catName) => categoryNames.add(catName.trim()));
     });
-    
+
     console.log(`🌱 Found ${categoryNames.size} unique categories to seed...`);
 
     for (const name of Array.from(categoryNames)) {
       // 1. Tìm xem category đã tồn tại chưa
-      let category = await BlogCategory.findOne({ name: name });
+      let category = await BlogCategory.findOne({ name });
 
       if (category) {
         // 2a. Nếu đã tồn tại, có thể cập nhật các trường nếu cần
@@ -55,7 +55,7 @@ async function seedBlogCategories() {
       } else {
         // 2b. Nếu chưa tồn tại, tạo một document mới
         category = new BlogCategory({
-          name: name,
+          name,
           createdBy: superadmin._id,
           isActive: true,
         });
@@ -64,7 +64,7 @@ async function seedBlogCategories() {
 
       // 3. Lệnh .save() sẽ kích hoạt tất cả các hooks (validate, save)
       // Nếu là document mới, nó sẽ insert. Nếu là document đã có, nó sẽ update.
-      await category.save(); 
+      await category.save();
       console.log(`     -> Saved successfully (slug generated).`);
     }
 

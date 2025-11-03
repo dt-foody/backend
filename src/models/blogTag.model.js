@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
-const { toJSON, paginate } = require('./plugins/index.js');
+const { toJSON, paginate } = require('./plugins/index');
+
 const { Schema } = mongoose;
 
 const BlogTagSchema = new Schema(

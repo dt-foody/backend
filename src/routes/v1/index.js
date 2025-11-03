@@ -89,7 +89,7 @@ const defaultRoutes = [
   {
     path: '/blog-tags',
     route: blogTagRoute,
-  }
+  },
 ];
 
 const devRoutes = [

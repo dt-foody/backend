@@ -1,6 +1,6 @@
-const BaseRoute = require('../../utils/_base.route.js'); // Import BaseRoute
-const { voucherController } = require('../../controllers/index.js');
-const { voucherValidation } = require('../../validations/index.js');
+const BaseRoute = require('../../utils/_base.route');
+const { voucherController } = require('../../controllers/index');
+const { voucherValidation } = require('../../validations/index');
 
 function list(req, res, next) {
   const { search } = req.query;
@@ -13,37 +13,37 @@ function list(req, res, next) {
     delete req.query.search;
   }
   next();
-};
+}
 
 function create(req, res, next) {
   next();
-};
+}
 
 function findById(req, res, next) {
   next();
-};
+}
 
 function updateById(req, res, next) {
   next();
-};
+}
 
 function deleteById(req, res, next) {
   next();
-};
+}
 
 function deleteManyById(req, res, next) {
   next();
-};
+}
 
 class VoucherRoute extends BaseRoute {
   constructor() {
     const middlewares = {
-      list: [ list ],
-      create: [ create ],
-      findById: [ findById ],
-      updateById: [ updateById ],
-      deleteById: [ deleteById ],
-      deleteManyById: [ deleteManyById ],
+      list: [list],
+      create: [create],
+      findById: [findById],
+      updateById: [updateById],
+      deleteById: [deleteById],
+      deleteManyById: [deleteManyById],
     };
     super(voucherController, voucherValidation, 'voucher', middlewares); // Truyền controller, validation và resource
   }

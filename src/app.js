@@ -6,6 +6,8 @@ const compression = require('compression');
 const cors = require('cors');
 const passport = require('passport');
 const httpStatus = require('http-status');
+const path = require('path');
+const cookieParser = require('cookie-parser');
 const config = require('./config/config');
 const morgan = require('./config/morgan');
 const { jwtStrategy } = require('./config/passport');
@@ -14,8 +16,6 @@ const routes = require('./routes/v1');
 const routesPublic = require('./routes/v1/public');
 const { errorConverter, errorHandler } = require('./middlewares/error');
 const ApiError = require('./utils/ApiError');
-const path = require('path');
-const cookieParser = require('cookie-parser');
 
 const app = express();
 
@@ -44,12 +44,12 @@ app.use(compression());
 
 // 1. Danh sách các origin được phép
 const allowedOrigins = [
-  'http://localhost:3001',       
-  'http://localhost:4200',     
-  'http://localhost:3000', 
+  'http://localhost:3001',
+  'http://localhost:4200',
+  'http://localhost:3000',
   'http://localhost:4000',
   'https://foody-user.vercel.app',
-  "https://web-admin-sandy.vercel.app",
+  'https://web-admin-sandy.vercel.app',
 ];
 
 const corsOptions = {

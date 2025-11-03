@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { toJSON, paginate } = require('./plugins/index.js'); // Giả định các plugin này tồn tại
+const { toJSON, paginate } = require('./plugins'); // Giả định các plugin này tồn tại
 
 const { Schema } = mongoose;
 
@@ -33,7 +33,7 @@ const ProductOptionGroupSchema = new Schema(
     minOptions: { type: Number, default: 0 }, // Số lượng tối thiểu phải chọn
     maxOptions: { type: Number, default: 1 }, // Số lượng tối đa được chọn (vd: 1 cho size, 3 cho topping)
     priority: { type: Number, default: 0 }, // Thứ tự hiển thị nhóm tùy chọn
-    
+
     // Mảng nhúng các tùy chọn cụ thể
     options: [ProductOptionSchema],
   },
@@ -49,23 +49,23 @@ const ProductSchema = new Schema(
       type: Number,
       default: 0,
     },
-    
+
     // Liên kết với Category (FK)
     category: {
       type: Schema.Types.ObjectId,
       ref: 'Category',
       required: true,
     },
-    
+
     thumbnailUrl: { type: String, default: '' },
-    
+
     // Thuộc tính quản lý
     isActive: { type: Boolean, default: true }, // Trạng thái bán
     priority: { type: Number, default: 0 }, // Thứ tự hiển thị sản phẩm trong Category
-    
+
     // Mảng nhúng các nhóm tùy chọn (Size, Topping, etc.)
-    optionGroups: [ProductOptionGroupSchema], 
-    
+    optionGroups: [ProductOptionGroupSchema],
+
     // --- Audit & Soft Delete Fields (Tương tự CategorySchema) ---
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     isDeleted: {
@@ -83,7 +83,6 @@ const ProductSchema = new Schema(
 ProductSchema.index({ category: 1, name: 1 }, { unique: true });
 // Index cho tìm kiếm nhanh theo trạng thái và ưu tiên (dùng khi hiển thị menu)
 ProductSchema.index({ isActive: 1, priority: 1 });
-
 
 // --- Plugins ---
 ProductSchema.plugin(toJSON);

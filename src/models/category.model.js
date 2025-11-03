@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const { toJSON, paginate } = require('./plugins/index.js');
+const { toJSON, paginate } = require('./plugins');
+
 const { Schema } = mongoose;
 
 const CategorySchema = new Schema(
@@ -42,14 +43,22 @@ CategorySchema.pre('save', async function (next) {
   next();
 });
 
-// ======================================================
-// =================  PRE UPDATEONE  =====================
-// ======================================================
+async function updateChildrenAncestors(model, parentId, parentAncestors) {
+  const children = await model.find({ parent: parentId, isDeleted: false });
+  // eslint-disable-next-line no-restricted-syntax
+  for (const child of children) {
+    const newAncestors = [...parentAncestors, parentId];
+    // eslint-disable-next-line no-await-in-loop
+    await model.updateOne({ _id: child._id, ancestors: { $ne: newAncestors } }, { $set: { ancestors: newAncestors } });
+    // eslint-disable-next-line no-await-in-loop
+    await updateChildrenAncestors(model, child._id, newAncestors);
+  }
+}
+
 CategorySchema.pre(['updateOne', 'findOneAndUpdate'], { document: false, query: true }, async function (next) {
-  console.log('pre updateOne');
   const query = this.getQuery();
   const update = this.getUpdate() || {};
-  const model = this.model;
+  const { model } = this;
 
   const category = await model.findOne(query).lean();
   if (!category) return next();
@@ -68,12 +77,8 @@ CategorySchema.pre(['updateOne', 'findOneAndUpdate'], { document: false, query: 
   next();
 });
 
-// ======================================================
-// =================  POST UPDATEONE  ====================
-// ======================================================
 CategorySchema.post(['updateOne', 'findOneAndUpdate'], { document: false, query: true }, async function (res) {
-  console.log('post updateOne');
-  const model = this.model;
+  const { model } = this;
   const before = this._categoryBefore;
   const update = this._updateData;
 
@@ -90,38 +95,20 @@ CategorySchema.post(['updateOne', 'findOneAndUpdate'], { document: false, query:
   if (update && update.isDeleted === true && !before.isDeleted) {
     const children = await model.find({ parent: doc._id });
 
+    // eslint-disable-next-line no-restricted-syntax
     for (const child of children) {
       const newParent = doc.parent || null;
       const newAncestors = newParent ? [...doc.ancestors] : [];
 
-      await model.updateOne(
-        { _id: child._id },
-        { parent: newParent, ancestors: newAncestors }
-      );
+      // eslint-disable-next-line no-await-in-loop
+      await model.updateOne({ _id: child._id }, { parent: newParent, ancestors: newAncestors });
 
+      // eslint-disable-next-line no-await-in-loop
       await updateChildrenAncestors(model, child._id, newAncestors);
     }
   }
 });
 
-// ======================================================
-// ==================  HELPER  ===========================
-// ======================================================
-async function updateChildrenAncestors(model, parentId, parentAncestors) {
-  const children = await model.find({ parent: parentId, isDeleted: false });
-  for (const child of children) {
-    const newAncestors = [...parentAncestors, parentId];
-    await model.updateOne(
-      { _id: child._id, ancestors: { $ne: newAncestors } },
-      { $set: { ancestors: newAncestors } }
-    );
-    await updateChildrenAncestors(model, child._id, newAncestors);
-  }
-}
-
-// ======================================================
-// ==================  EXPORT MODEL  =====================
-// ======================================================
 const Category = mongoose.model('Category', CategorySchema);
 
 module.exports = Category;

@@ -1,9 +1,8 @@
 const express = require('express');
-const validate = require('../../../middlewares/validate.js');
-const customerValidation = require('../../../validations/customer.validation.js');
-const customerController = require('../../../controllers/customer.controller.js');
-const queryMiddleware = require('../../../middlewares/queryMiddleware.js');
-const auth = require('../../../middlewares/auth.js');
+const validate = require('../../../middlewares/validate');
+const customerValidation = require('../../../validations/customer.validation');
+const customerController = require('../../../controllers/customer.controller');
+const auth = require('../../../middlewares/auth');
 
 const router = express.Router();
 

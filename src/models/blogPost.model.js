@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
-const { toJSON, paginate } = require('./plugins/index.js');
+const { toJSON, paginate } = require('./plugins/index');
 
 const { Schema } = mongoose;
 
@@ -37,15 +37,11 @@ const BlogPostSchema = new Schema(
 
     // --- Phân loại ---
     categories: {
-      type: [
-        { type: Schema.Types.ObjectId, ref: 'BlogCategory' },
-      ],
+      type: [{ type: Schema.Types.ObjectId, ref: 'BlogCategory' }],
       default: [],
     },
     tags: {
-      type: [
-        { type: Schema.Types.ObjectId, ref: 'BlogTag' },
-      ],
+      type: [{ type: Schema.Types.ObjectId, ref: 'BlogTag' }],
       default: [],
     },
 

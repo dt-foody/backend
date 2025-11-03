@@ -10,16 +10,16 @@ const config = require('../config/config');
 
 // Dữ liệu mẫu để trích xuất tags
 const posts = [
-  { tags: ["Foody", "Review quán ăn", "DeliveryNow"] },
-  { tags: ["Cà phê", "Foody", "Review quán"] },
-  { tags: ["Foody", "Google Maps", "Ẩm thực Việt"] },
-  { tags: ["Foody", "Review quán ăn", "Tips viết bài"] },
-  { tags: ["Foody", "Top món ăn", "Review cộng đồng"] },
-  { tags: ["Foody", "Cộng đồng", "Ẩm thực Việt"] },
-  { tags: ["Foody", "AI", "Trải nghiệm ẩm thực"] },
-  { tags: ["Foody", "Now.vn", "Giao đồ ăn"] },
-  { tags: ["Foody", "Ẩm thực Việt", "Quốc tế"] },
-  { tags: ["Foody", "Startup Việt", "Ẩm thực"] }
+  { tags: ['Foody', 'Review quán ăn', 'DeliveryNow'] },
+  { tags: ['Cà phê', 'Foody', 'Review quán'] },
+  { tags: ['Foody', 'Google Maps', 'Ẩm thực Việt'] },
+  { tags: ['Foody', 'Review quán ăn', 'Tips viết bài'] },
+  { tags: ['Foody', 'Top món ăn', 'Review cộng đồng'] },
+  { tags: ['Foody', 'Cộng đồng', 'Ẩm thực Việt'] },
+  { tags: ['Foody', 'AI', 'Trải nghiệm ẩm thực'] },
+  { tags: ['Foody', 'Now.vn', 'Giao đồ ăn'] },
+  { tags: ['Foody', 'Ẩm thực Việt', 'Quốc tế'] },
+  { tags: ['Foody', 'Startup Việt', 'Ẩm thực'] },
 ];
 
 async function seedBlogTags() {
@@ -38,15 +38,15 @@ async function seedBlogTags() {
 
     // Dùng Set để tự động loại bỏ các tag trùng lặp
     const tagNames = new Set();
-    posts.forEach(post => {
-      post.tags.forEach(tagName => tagNames.add(tagName.trim()));
+    posts.forEach((post) => {
+      post.tags.forEach((tagName) => tagNames.add(tagName.trim()));
     });
 
     console.log(`🌱 Found ${tagNames.size} unique tags to seed...`);
 
     for (const name of Array.from(tagNames)) {
       // 1. Tìm xem tag đã tồn tại chưa
-      let tag = await BlogTag.findOne({ name: name });
+      let tag = await BlogTag.findOne({ name });
 
       if (tag) {
         // 2a. Nếu đã tồn tại, cập nhật nếu cần
@@ -55,7 +55,7 @@ async function seedBlogTags() {
       } else {
         // 2b. Nếu chưa tồn tại, tạo một document mới
         tag = new BlogTag({
-          name: name,
+          name,
           createdBy: superadmin._id,
           isActive: true,
         });

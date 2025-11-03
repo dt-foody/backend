@@ -10,16 +10,15 @@ const Permission = require('../models/permission.model');
 const User = require('../models/user.model');
 const config = require('../config/config');
 
-
 async function seedPermissions() {
   try {
     console.log('🔄 Connecting to MongoDB...');
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
 
     const permissions = await Permission.find({}).lean();
-    const permissionsId = permissions.map(el => el.id || el._id);
+    const permissionsId = permissions.map((el) => el.id || el._id);
 
-    await User.updateMany({ role: 'admin'}, { $set: { extraPermissions: permissionsId } })
+    await User.updateMany({ role: 'admin' }, { $set: { extraPermissions: permissionsId } });
 
     console.log('🎉 Permission seeding completed successfully!');
     await mongoose.disconnect();

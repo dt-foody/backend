@@ -1,6 +1,6 @@
+const httpStatus = require('http-status');
 const BaseController = require('../utils/_base.controller.js');
 const { couponService } = require('../services/index.js');
-const httpStatus = require('http-status');
 
 const { OK } = httpStatus;
 
@@ -15,10 +15,7 @@ class CouponController extends BaseController {
       public: true,
       startDate: { $lte: new Date() },
       endDate: { $gte: new Date() },
-      $or: [
-        { maxUses: 0 },
-        { $expr: { $lt: ['$usedCount', '$maxUses'] } },
-      ]
+      $or: [{ maxUses: 0 }, { $expr: { $lt: ['$usedCount', '$maxUses'] } }],
     });
 
     return res.status(OK).json(coupons);

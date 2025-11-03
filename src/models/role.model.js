@@ -1,6 +1,6 @@
 // models/role.model.js
 const mongoose = require('mongoose');
-const { toJSON, paginate } = require('./plugins/index.js');
+const { toJSON, paginate } = require('./plugins');
 
 const { Schema } = mongoose;
 

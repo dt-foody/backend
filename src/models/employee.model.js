@@ -1,6 +1,5 @@
 // models/employee.model.js
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const { toJSON, paginate } = require('./plugins');
 const Counter = require('./counter.model');
 
@@ -45,7 +44,6 @@ const EmployeeSchema = new Schema(
   },
   { timestamps: true }
 );
-
 
 // --- AUTO-INCREMENT customerId ---
 EmployeeSchema.pre('save', async function (next) {

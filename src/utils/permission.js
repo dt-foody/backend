@@ -1,9 +1,9 @@
-const { roleRights } = require('../config/roles');
+// const { roleRights } = require('../config/roles');
 const Role = require('../models/role.model');
 const Permission = require('../models/permission.model');
 
 async function getEffectivePermissions(user) {
-  let permissions = new Set();
+  const permissions = new Set();
 
   // 1️⃣. Lấy quyền từ role hệ thống (VD: admin, manager)
   //   const systemPerms = roleRights.get(user.role) || [];
@@ -12,21 +12,21 @@ async function getEffectivePermissions(user) {
   // 2️⃣. Lấy quyền từ các role custom (populate rolesCustom → permissions)
   if (user.rolesCustom && user.rolesCustom.length) {
     const customRoles = await Role.find({ _id: { $in: user.rolesCustom } }).populate('permissions');
-    customRoles.forEach(role => {
-      role.permissions.forEach(p => permissions.add(p.name));
+    customRoles.forEach((role) => {
+      role.permissions.forEach((p) => permissions.add(p.name));
     });
   }
 
   // 3️⃣. Cộng thêm extraPermissions
   if (user.extraPermissions && user.extraPermissions.length) {
     const extras = await Permission.find({ _id: { $in: user.extraPermissions } });
-    extras.forEach(p => permissions.add(p.name));
+    extras.forEach((p) => permissions.add(p.name));
   }
 
   // 4️⃣. Loại bỏ excludePermissions
   if (user.excludePermissions && user.excludePermissions.length) {
     const excludes = await Permission.find({ _id: { $in: user.excludePermissions } });
-    excludes.forEach(p => permissions.delete(p.name));
+    excludes.forEach((p) => permissions.delete(p.name));
   }
 
   return Array.from(permissions);

@@ -159,18 +159,18 @@ const verifyEmail = async (verifyEmailToken) => {
   try {
     const verifyEmailTokenDoc = await tokenService.verifyToken(verifyEmailToken, tokenTypes.VERIFY_EMAIL);
 
-    console.log("verifyEmailTokenDoc", verifyEmailTokenDoc);
+    console.log('verifyEmailTokenDoc', verifyEmailTokenDoc);
     const user = await userService.findById(verifyEmailTokenDoc.user);
-    console.log("user", user);
+    console.log('user', user);
     if (!user) {
       throw new Error();
     }
 
-    console.log("user._id || user.id", user._id || user.id);
+    console.log('user._id || user.id', user._id || user.id);
     // await Token.deleteMany({ user: user.id, type: tokenTypes.VERIFY_EMAIL });
     await userService.updateOne({ _id: user._id || user.id }, { isEmailVerified: true });
   } catch (error) {
-    console.log("123", error)
+    console.log('123', error);
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Email verification failed');
   }
 };

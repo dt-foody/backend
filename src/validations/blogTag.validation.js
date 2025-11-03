@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { objectId } = require('./custom.validation.js');
+const { objectId } = require('./custom.validation');
 
 const create = {
   body: Joi.object().keys({
@@ -51,17 +51,7 @@ const deleteById = {
 
 const deleteManyById = {
   params: Joi.object().keys({
-    ids: Joi.string()
-      .custom((value, helpers) => {
-        const ids = value.split(',').map((id) => id.trim());
-        for (const id of ids) {
-          if (!objectId.isValid(id)) {
-            return helpers.message(`Invalid ID: ${id}`);
-          }
-        }
-        return value;
-      })
-      .required(),
+    ids: Joi.string().required(),
   }),
 };
 

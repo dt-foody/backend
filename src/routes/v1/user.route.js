@@ -1,6 +1,6 @@
-const BaseRoute = require('../../utils/_base.route.js');
-const { userController } = require('../../controllers/index.js');
-const { userValidation } = require('../../validations/index.js');
+const BaseRoute = require('../../utils/_base.route');
+const { userController } = require('../../controllers/index');
+const { userValidation } = require('../../validations/index');
 const auth = require('../../middlewares/auth'); // Import auth middleware
 
 function list(req, res, next) {
@@ -38,7 +38,7 @@ class UserRoute extends BaseRoute {
       deleteManyById: [deleteManyById],
     };
     super(userController, userValidation, 'user', middlewares);
-    
+
     // Thêm route tùy chỉnh cho changePassword
     this.addCustomRoutes();
   }

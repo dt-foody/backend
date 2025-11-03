@@ -1,5 +1,5 @@
 const Joi = require('joi');
-const { objectId, password } = require('./custom.validation');
+const { objectId } = require('./custom.validation');
 
 // --- Schema con ---
 const addressSchema = Joi.object().keys({
@@ -13,7 +13,7 @@ const addressSchema = Joi.object().keys({
   location: Joi.object()
     .keys({
       type: Joi.string().valid('Point').default('Point'),
-      coordinates: Joi.array(), //.length(2).items(Joi.number()).required(), // [lng, lat]
+      coordinates: Joi.array(), // .length(2).items(Joi.number()).required(), // [lng, lat]
     })
     .optional(),
   isDefault: Joi.boolean().default(false),
@@ -94,17 +94,7 @@ const deleteById = {
 // --- DELETE MANY BY IDS ---
 const deleteManyById = {
   params: Joi.object().keys({
-    ids: Joi.string()
-      .custom((value, helpers) => {
-        const ids = value.split(',').map((id) => id.trim());
-        for (const id of ids) {
-          if (!objectId.isValid(id)) {
-            return helpers.message(`Invalid ID: ${id}`);
-          }
-        }
-        return value;
-      })
-      .required(),
+    ids: Joi.string().required(),
   }),
 };
 

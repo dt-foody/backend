@@ -1,6 +1,6 @@
 const Joi = require('joi');
 const mongoose = require('mongoose');
-const { objectId } = require('./custom.validation.js');
+const { objectId } = require('./custom.validation');
 
 // Sub-schema cho discountSnapshot (dựa trên model)
 const discountSnapshotSchema = Joi.object({
@@ -14,16 +14,16 @@ const create = {
     customer: Joi.string().custom(objectId).required(),
     coupon: Joi.string().custom(objectId).required(),
     code: Joi.string().required(), // Admin hoặc hệ thống phải tạo code khi cấp phát
-    
+
     issueMode: Joi.string().valid('CLAIM', 'ADMIN', 'AUTO', 'REFERRAL').default('ADMIN'),
     status: Joi.string().valid('UNUSED', 'USED', 'EXPIRED', 'REVOKED').default('UNUSED'),
-    
+
     expiredAt: Joi.date().required(), // Ngày hết hạn là bắt buộc khi tạo
     usageLimit: Joi.number().min(1).default(1),
 
     // Snapshot là bắt buộc khi tạo voucher
     discountSnapshot: discountSnapshotSchema,
-    
+
     // orderId, usedAt, revokeAt... sẽ được cập nhật sau
   }),
 };
@@ -35,7 +35,7 @@ const paginate = {
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
-    
+
     // --- Filters ---
     customer: Joi.string().custom(objectId),
     coupon: Joi.string().custom(objectId),
@@ -62,12 +62,12 @@ const updateById = {
       coupon: Joi.string().custom(objectId),
       order: Joi.string().custom(objectId).allow(null),
       code: Joi.string(),
-      
+
       // Các trường thường update
       status: Joi.string().valid('UNUSED', 'USED', 'EXPIRED', 'REVOKED'),
       expiredAt: Joi.date(),
       usageLimit: Joi.number().min(0),
-      
+
       // Không nên cho phép update snapshot, nhưng nếu cần:
       // discountSnapshot: Joi.object({
       //   type: Joi.string().valid('fixed', 'percentage'),
@@ -96,9 +96,9 @@ const deleteManyById = {
     ids: Joi.string()
       .custom((value, helpers) => {
         const ids = value.split(',').map((id) => id.trim());
-        const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+        const invalidIds = ids.filter((id) => !mongoose.Types.ObjectId.isValid(id));
         if (invalidIds.length > 0) {
-            return helpers.message(`One or more IDs are invalid: ${invalidIds.join(', ')}`);
+          return helpers.message(`One or more IDs are invalid: ${invalidIds.join(', ')}`);
         }
         return value;
       })

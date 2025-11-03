@@ -1,5 +1,5 @@
 const httpStatus = require('http-status');
-const ApiError = require('./ApiError.js');
+const ApiError = require('./ApiError');
 
 const { NOT_FOUND, NOT_MODIFIED } = httpStatus;
 
@@ -36,7 +36,7 @@ class BaseService {
     if (options.populate) {
       dbQuery = dbQuery.populate(options.populate);
     }
-    
+
     if (options.limit) {
       dbQuery = dbQuery.limit(options.limit);
     }

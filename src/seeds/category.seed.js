@@ -121,8 +121,7 @@ async function seedCategories() {
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
 
     // --- Lấy user tạo ---
-    const superadmin =
-      (await User.findOne({ email: 'superadmin@gmail.com' }).select('_id').lean()) || null;
+    const superadmin = (await User.findOne({ email: 'superadmin@gmail.com' }).select('_id').lean()) || null;
 
     if (!superadmin) {
       console.warn('⚠️ Không tìm thấy user superadmin@gmail.com → dùng ObjectId tạm.');

@@ -1,7 +1,7 @@
-const BaseController = require('../utils/_base.controller.js');
-const { blogCategoryService } = require('../services/index.js');
 const httpStatus = require('http-status');
 const he = require('he');
+const BaseController = require('../utils/_base.controller.js');
+const { blogCategoryService } = require('../services/index.js');
 
 const { OK } = httpStatus;
 
@@ -14,7 +14,7 @@ class BlogCategoryController extends BaseController {
     const query = { slug: req.params.slug };
 
     const data = await blogCategoryService.findOne(query, req.options);
-    
+
     if (data && data.content) {
       data.content = he.decode(data.content);
     }
