@@ -45,5 +45,12 @@ function paginate(req, res, next) {
 const router = express.Router();
 
 router.get('/', validate(productValidation.paginate), queryMiddleware, paginate, productController.paginate);
+router.get(
+  '/group-by-category',
+  validate(productValidation.paginate),
+  queryMiddleware,
+  paginate,
+  productController.groupByCategory
+);
 
 module.exports = router;

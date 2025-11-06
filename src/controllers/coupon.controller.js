@@ -31,11 +31,10 @@ class CouponController extends BaseController {
     const options = {
       ...(req.options || {}),
       sort: { priority: -1, startDate: 1, createdAt: -1 },
-      lean: true,
     };
 
     const coupons = await this.service.findAll(filter, options);
-    return res.status(OK).json(coupons);
+    res.status(OK).json(coupons);
   }
 }
 
