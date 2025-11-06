@@ -48,7 +48,7 @@ const allowedOrigins = [
   'http://localhost:4200',
   'http://localhost:3000',
   'http://localhost:4000',
-  'https://foody-user.vercel.app',
+  'https://luuchi.vercel.app',
   'https://web-admin-sandy.vercel.app',
 ];
 
