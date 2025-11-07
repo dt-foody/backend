@@ -20,17 +20,28 @@ const OrderSchema = new Schema(
   {
     // --- ID tăng tự động ---
     orderId: { type: Number, unique: true },
+    orderCode: { type: Number, unique: true},
 
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+    profileType: {
+      type: String,
+      required: true,
+      enum: ['Customer', 'Employee'], // chỉ 2 loại được phép
+    },
+    profile: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      refPath: 'profileType', // 🔥 dynamic ref
+    },
     items: [OrderItemSchema],
     totalAmount: { type: Number, required: true },
     discountAmount: { type: Number, default: 0 },
     shippingFee: { type: Number, default: 0 },
     grandTotal: { type: Number, required: true }, // tổng cuối cùng
     payment: {
-      method: { type: String, enum: ['cash', 'momo', 'vnpay'], default: 'cash' },
+      method: { type: String, enum: ['cash', 'payos', 'momo', 'vnpay'], default: 'cash' },
       status: { type: String, enum: ['pending', 'paid', 'failed'], default: 'pending' },
-      transactionId: { type: String },
+      transactionId: { type: String, default: '' },
+      checkoutUrl: { type: String, default: ''},
     },
     shipping: {
       address: {

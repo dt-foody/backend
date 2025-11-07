@@ -13,7 +13,7 @@ const orderItemSchema = Joi.object({
 
 // --- SCHEMA CON: Payment ---
 const paymentSchema = Joi.object({
-  method: Joi.string().valid('cash', 'momo', 'vnpay').default('cash'),
+  method: Joi.string().valid('cash', 'payos').default('cash'),
   status: Joi.string().valid('pending', 'paid', 'failed').default('pending'),
   transactionId: Joi.string().allow('', null),
 });
@@ -26,7 +26,6 @@ const shippingSchema = Joi.object({
     recipientPhone: Joi.string().required(),
     street: Joi.string().required(),
     ward: Joi.string().required(),
-    district: Joi.string().required(),
     city: Joi.string().required(),
   }).required(),
   status: Joi.string().valid('pending', 'delivering', 'delivered', 'failed').default('pending'),
@@ -79,6 +78,12 @@ const findById = {
   }),
 };
 
+const getByCode = {
+  params: Joi.object({
+    code: Joi.string().required(),
+  }),
+}
+
 // --- UPDATE BY ID ---
 const updateById = {
   params: Joi.object({
@@ -113,6 +118,27 @@ const deleteManyById = {
   }),
 };
 
+// customer order
+const customerOrder = {
+  body: Joi.object({
+    items: Joi.array().items(orderItemSchema).min(1).required(),
+
+    totalAmount: Joi.number().required(),
+    discountAmount: Joi.number().min(0).default(0),
+    shippingFee: Joi.number().min(0).default(0),
+    grandTotal: Joi.number().required(),
+
+    payment: paymentSchema.default({}),
+    shipping: shippingSchema.required(),
+
+    status: Joi.string()
+      .valid('pending', 'confirmed', 'preparing', 'delivering', 'completed', 'canceled')
+      .default('pending'),
+
+    note: Joi.string().allow('', null),
+  }),
+};
+
 module.exports = {
   create,
   paginate,
@@ -120,4 +146,7 @@ module.exports = {
   updateById,
   deleteById,
   deleteManyById,
+
+  customerOrder,
+  getByCode,
 };

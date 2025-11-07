@@ -23,6 +23,11 @@ const envVarsSchema = Joi.object()
     SMTP_USERNAME: Joi.string().description('username for email server'),
     SMTP_PASSWORD: Joi.string().description('password for email server'),
     EMAIL_FROM: Joi.string().description('the from field in the emails sent by the app'),
+    PAYOS_CLIENT_ID: Joi.string().description('PayOS Client Id'),
+    PAYOS_API_KEY: Joi.string().description('PayOS Api Key'),
+    PAYOS_CHECKSUM_KEY: Joi.string().description('PayOS Checksum Key'),
+    REDIRECT_PAYMENT_SUCCESS: Joi.string().description('PayOS Redirect Payment Success'),
+    REDIRECT_PAYMENT_FAIL: Joi.string().description('PayOS Redirect Payment Cancel'),
   })
   .unknown();
 
@@ -60,5 +65,12 @@ module.exports = {
       },
     },
     from: envVars.EMAIL_FROM,
+  },
+  payos: {
+    client_id: envVars.PAYOS_CLIENT_ID,
+    api_key: envVars.PAYOS_API_KEY,
+    checksum_key: envVars.PAYOS_CHECKSUM_KEY,
+    redirect_payment_success: envVars.REDIRECT_PAYMENT_SUCCESS,
+    redirect_payment_cancel: envVars.REDIRECT_PAYMENT_FAIL,
   },
 };

@@ -43,24 +43,29 @@ const register = async (subdomain, userBody) => {
       isEmailVerified: false, // Mặc định là chưa xác thực
     });
 
-    console.log('userBody', userBody);
-
     // 4. TẠO PROFILE (Customer hoặc Employee cho thông tin nghiệp vụ)
     try {
       if (isAdmin) {
         // Nếu là admin, tạo Employee
         // Sử dụng employeeService.createEmployee
-        await employeeService.create({
+        const employee = await employeeService.create({
           ...userBody, // Truyền tất cả thông tin profile (name, phone, gender...)
           user: newUser._id, // Đây là liên kết 1-1 quan trọng
         });
+
+        newUser.profileType = 'Employee';
+        newUser.profile = employee._id;
       } else {
         // Nếu là customer, tạo Customer
         // Sử dụng customerService.createCustomer
-        await customerService.create({
+        const customer = await customerService.create({
           ...userBody, // Truyền tất cả thông tin profile (name, phone, addresses...)
           user: newUser._id, // Đây là liên kết 1-1 quan trọng
         });
+
+        newUser.profileType = 'Customer';
+        newUser.profile = customer._id;
+      
       }
     } catch (profileError) {
       // 6. ROLLBACK THỦ CÔNG:
@@ -159,18 +164,14 @@ const verifyEmail = async (verifyEmailToken) => {
   try {
     const verifyEmailTokenDoc = await tokenService.verifyToken(verifyEmailToken, tokenTypes.VERIFY_EMAIL);
 
-    console.log('verifyEmailTokenDoc', verifyEmailTokenDoc);
     const user = await userService.findById(verifyEmailTokenDoc.user);
-    console.log('user', user);
     if (!user) {
       throw new Error();
     }
 
-    console.log('user._id || user.id', user._id || user.id);
     // await Token.deleteMany({ user: user.id, type: tokenTypes.VERIFY_EMAIL });
     await userService.updateOne({ _id: user._id || user.id }, { isEmailVerified: true });
   } catch (error) {
-    console.log('123', error);
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Email verification failed');
   }
 };

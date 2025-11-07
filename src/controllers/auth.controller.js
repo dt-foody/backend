@@ -27,9 +27,6 @@ const login = catchAsync(async (req, res) => {
   const user = await authService.login(email, password);
 
   // --- LOGIC MỚI: KIỂM TRA SUBDOMAIN VÀ ROLE ---
-
-  // 1. Lấy hostname từ request (ví dụ: 'admin.domain.com' hoặc 'localhost')
-  // req.hostname sẽ tự động bỏ port (ví dụ :3000)
   const { hostname } = req;
 
   // 2. Kiểm tra xem đây có phải là subdomain 'admin' không
