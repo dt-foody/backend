@@ -28,6 +28,7 @@ const paginate = {
   query: Joi.object().keys({
     search: Joi.string().allow('', null),
     title: Joi.string().allow('', null),
+    categorySlug: Joi.string().allow('', null),
     category: Joi.string().custom(objectId).allow('', null),
     tag: Joi.string().custom(objectId).allow('', null),
     status: Joi.string().valid('draft', 'published', 'archived').allow('', null),

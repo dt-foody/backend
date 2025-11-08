@@ -1,10 +1,21 @@
 const express = require('express');
 const validate = require('../../../middlewares/validate');
-const blogPostValidation = require('../../../validations/blogPost.validation');
-const blogPostController = require('../../../controllers/blogPost.controller');
+const { blogPostValidation } = require('../../../validations');
+const { blogPostController } = require('../../../controllers');
+const { blogCategoryService } = require('../../../services');
 const queryMiddleware = require('../../../middlewares/queryMiddleware');
 
-function paginate(req, res, next) {
+async function paginate(req, res, next) {
+  const { categorySlug } = req.query;
+
+  if (categorySlug) {
+    const category = await blogCategoryService.findOne({ slug: categorySlug });
+
+    req.query.categories = category._id;
+  }
+
+  delete req.query.categorySlug;
+
   next();
 }
 
