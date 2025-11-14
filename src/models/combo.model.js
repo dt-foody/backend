@@ -86,7 +86,7 @@ const ComboSchema = new Schema(
       default: 0,
       min: 0,
     },
-    
+
     /** MỚI: Loại giảm giá */
     discountType: {
       type: String,
@@ -99,7 +99,7 @@ const ComboSchema = new Schema(
       default: 0,
       min: 0,
     },
-    
+
     /** BỎ: discountAmount */
     /** BỎ: discountPercent */
   },
@@ -120,8 +120,8 @@ ComboSchema.pre('save', function (next) {
     if (item.maxSelection < item.minSelection) {
       return next(
         new Error(
-          `Validation Error: Slot "${item.slotName}" maxSelection (${item.maxSelection}) must be >= minSelection (${item.minSelection}).`,
-        ),
+          `Validation Error: Slot "${item.slotName}" maxSelection (${item.maxSelection}) must be >= minSelection (${item.minSelection}).`
+        )
       );
     }
   }

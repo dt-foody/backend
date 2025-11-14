@@ -6,7 +6,7 @@ const { toJSON, paginate } = require('./plugins');
 
 /* ============================================================
  * 1. OrderItemOptionSchema
- * ============================================================*/
+ * ============================================================ */
 const OrderItemOptionSchema = new Schema(
   {
     groupName: { type: String, required: true },
@@ -18,7 +18,7 @@ const OrderItemOptionSchema = new Schema(
 
 /* ============================================================
  * 2. ComboSelection Schema
- * ============================================================*/
+ * ============================================================ */
 const OrderItemComboSelectionSchema = new Schema(
   {
     slotName: { type: String, required: true },
@@ -33,7 +33,7 @@ const OrderItemComboSelectionSchema = new Schema(
 
 /* ============================================================
  * 3. OrderItem Schema
- * ============================================================*/
+ * ============================================================ */
 const OrderItemSchema = new Schema({
   item: { type: Schema.Types.ObjectId, refPath: 'itemType', required: true },
   itemType: { type: String, enum: ['Product', 'Combo'], required: true },
@@ -52,7 +52,7 @@ const OrderItemSchema = new Schema({
 
 /* ============================================================
  * 4. Main Order Schema
- * ============================================================*/
+ * ============================================================ */
 const OrderSchema = new Schema(
   {
     // Auto-increment readable ID
@@ -109,30 +109,14 @@ const OrderSchema = new Schema(
       },
       status: {
         type: String,
-        enum: [
-          'pending',
-          'preparing',
-          'delivering',
-          'delivered',
-          'failed',
-          'canceled',
-        ],
+        enum: ['pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled'],
         default: 'pending',
       },
     },
 
     status: {
       type: String,
-      enum: [
-        'pending',
-        'confirmed',
-        'preparing',
-        'ready',
-        'delivering',
-        'completed',
-        'canceled',
-        'refunded',
-      ],
+      enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivering', 'completed', 'canceled', 'refunded'],
       default: 'pending',
       index: true,
     },
@@ -143,7 +127,7 @@ const OrderSchema = new Schema(
 
     /* ============================================================
      * 🔥 Danh sách coupon đã áp dụng
-     * ============================================================*/
+     * ============================================================ */
     appliedCoupons: {
       type: [
         new Schema(
@@ -164,7 +148,7 @@ const OrderSchema = new Schema(
 
 /* ============================================================
  * Auto-Increment orderId
- * ============================================================*/
+ * ============================================================ */
 OrderSchema.pre('save', async function (next) {
   if (!this.isNew) return next();
 

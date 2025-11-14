@@ -1,10 +1,9 @@
 const httpStatus = require('http-status');
 const BaseController = require('../utils/_base.controller');
-const { orderService, customerService, employeeService } = require('../services');
+const { orderService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
-const ApiError = require('../utils/ApiError');
 
-const { OK, NOT_FOUND } = httpStatus;
+const { OK } = httpStatus;
 
 class OrderController extends BaseController {
   constructor() {

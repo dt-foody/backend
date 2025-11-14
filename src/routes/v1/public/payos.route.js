@@ -1,6 +1,7 @@
 const express = require('express');
+
 const router = express.Router();
-const { getPayOS  } = require('../../../config/payos');
+const { getPayOS } = require('../../../config/payos');
 
 const payOS = getPayOS();
 
@@ -43,8 +44,7 @@ router.post('/create', async (req, res) => {
 router.get('/:orderId', async (req, res) => {
   try {
     const order = await payOS.getPaymentLinkInfomation(req.params.orderId);
-    if (!order)
-      return res.json({ error: -1, message: 'Not found', data: null });
+    if (!order) return res.json({ error: -1, message: 'Not found', data: null });
     return res.json({ error: 0, message: 'Success', data: order });
   } catch (error) {
     console.error(error);
@@ -55,12 +55,8 @@ router.get('/:orderId', async (req, res) => {
 // 🔴 Hủy thanh toán
 router.put('/:orderId', async (req, res) => {
   try {
-    const order = await payOS.cancelPaymentLink(
-      req.params.orderId,
-      req.body.cancellationReason
-    );
-    if (!order)
-      return res.json({ error: -1, message: 'Not found', data: null });
+    const order = await payOS.cancelPaymentLink(req.params.orderId, req.body.cancellationReason);
+    if (!order) return res.json({ error: -1, message: 'Not found', data: null });
     return res.json({ error: 0, message: 'Success', data: order });
   } catch (error) {
     console.error(error);

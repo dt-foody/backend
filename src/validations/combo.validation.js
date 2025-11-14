@@ -38,12 +38,12 @@ const create = {
       .valid(...pricingModes)
       .default('FIXED'),
     comboPrice: Joi.number().min(0).default(0),
-    
+
     discountType: Joi.string()
       .valid(...discountTypes)
       .default('NONE'),
     discountValue: Joi.number().min(0).default(0),
-    
+
     /** BỎ: discountAmount, discountPercent, và .nand() */
   }),
 };

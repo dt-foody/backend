@@ -65,9 +65,7 @@ const buildMenuCategories = (productResults, productPromoMap) => {
     categoryMap.get(catId).products.push(productData);
   }
 
-  const regularCategories = Array.from(categoryMap.values()).sort(
-    (a, b) => a.priority - b.priority
-  );
+  const regularCategories = Array.from(categoryMap.values()).sort((a, b) => a.priority - b.priority);
 
   return { regularCategories, flashSaleProducts };
 };
@@ -132,10 +130,7 @@ class MenuController {
     // --------------------------
     // BUILD MENU CATEGORY
     // --------------------------
-    const { regularCategories, flashSaleProducts } = buildMenuCategories(
-      productData,
-      productPromoMap
-    );
+    const { regularCategories, flashSaleProducts } = buildMenuCategories(productData, productPromoMap);
 
     // FLASH SALE CATEGORY TÁCH RIÊNG
     const flashSaleCategory =
@@ -184,10 +179,10 @@ class MenuController {
     // RESPONSE
     // --------------------------
     res.status(OK).json({
-      flashSales,          // danh sách khuyến mãi raw
-      flashSaleCategory,   // FLASH SALE CATEGORY (riêng)
+      flashSales, // danh sách khuyến mãi raw
+      flashSaleCategory, // FLASH SALE CATEGORY (riêng)
       thucDon: regularCategories, // MENU CATEGORY BÌNH THƯỜNG
-      combos,              // combo
+      combos, // combo
     });
   }
 }

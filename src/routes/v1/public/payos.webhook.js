@@ -1,4 +1,5 @@
 const express = require('express');
+
 const router = express.Router();
 const { getPayOS } = require('../../../config/payos');
 const { PayOSWebhookLog } = require('../../../models'); // model log webhook
@@ -47,11 +48,7 @@ router.post('/', async (req, res) => {
     }
 
     // 🔹 Bỏ qua giao dịch test
-    if (
-      ['Ma giao dich thu nghiem', 'VQRIO123'].includes(
-        verified.data?.description
-      )
-    ) {
+    if (['Ma giao dich thu nghiem', 'VQRIO123'].includes(verified.data?.description)) {
       console.log('ℹ️ Test transaction ignored');
       return res.json({
         error: 0,
@@ -63,10 +60,7 @@ router.post('/', async (req, res) => {
     const { orderCode, amount } = verified;
 
     // TODO: cập nhật trạng thái đơn hàng trong DB
-    await orderService.updateOne(
-      { orderCode },
-      { 'payment.status': 'paid', status: 'confirmed' }
-    );
+    await orderService.updateOne({ orderCode }, { 'payment.status': 'paid', status: 'confirmed' });
 
     console.log('💰 Payment success:', { orderCode, amount });
 
