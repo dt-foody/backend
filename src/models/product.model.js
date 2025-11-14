@@ -57,7 +57,7 @@ const ProductSchema = new Schema(
       required: true,
     },
 
-    thumbnailUrl: { type: String, default: '' },
+    image: { type: String, default: '' },
 
     // Thuộc tính quản lý
     isActive: { type: Boolean, default: true }, // Trạng thái bán

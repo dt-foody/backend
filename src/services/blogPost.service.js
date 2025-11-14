@@ -12,7 +12,7 @@ class BlogPostService extends BaseService {
    * @param {Object} query
    * @returns {Promise<Array<{ category: string, slug: string, posts: [] }>>}
    */
-  async groupByCategory(query = {}, options = {}) {
+  async groupByCategory(query = {}) {
     const limit = query.limit || 2;
 
     const pipeline = [
@@ -64,7 +64,7 @@ class BlogPostService extends BaseService {
       { $sort: { category: 1 } },
     ];
 
-    const result = await BlogPost.aggregate(pipeline);
+    const result = await this.model.aggregate(pipeline);
 
     const transformed = result.map((group) => ({
       ...group,

@@ -5,6 +5,7 @@
  *  - removes __v, createdAt, updatedAt, and any path that has private: true
  *  - replaces _id with id
  */
+const he = require('he');
 
 const deleteAtPath = (obj, path, index) => {
   if (index === path.length - 1) {
@@ -33,6 +34,11 @@ const toJSON = (schema) => {
       delete ret.__v;
       // delete ret.createdAt;
       // delete ret.updatedAt;
+
+      if (ret.content) {
+        ret.content = he.decode(ret.content);
+      }
+
       if (transform) {
         return transform(doc, ret, options);
       }

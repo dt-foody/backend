@@ -33,12 +33,6 @@ class BaseController {
 
     const data = await this.service.paginate(req.query, req.options);
 
-    if (Array.isArray(data.results)) {
-      data.results = data.results.map((item) => {
-        return item.content ? { ...item, content: he.decode(item.content) } : item;
-      });
-    }
-
     res.status(httpStatus.OK).json(data);
   }
 

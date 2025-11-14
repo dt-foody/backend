@@ -8,6 +8,7 @@ const addressSchema = Joi.object().keys({
   recipientPhone: Joi.string().required().trim(),
   street: Joi.string().required().trim(),
   ward: Joi.string().required().trim(),
+  district: Joi.string().required().trim(),
   city: Joi.string().required().trim(),
   fullAddress: Joi.string().allow('', null),
   location: Joi.object()
@@ -19,14 +20,30 @@ const addressSchema = Joi.object().keys({
   isDefault: Joi.boolean().default(false),
 });
 
+// --- Sub-schema cho emails ---
+const emailSchema = Joi.object({
+  type: Joi.string().valid('Home', 'Company', 'Other').default('Other'),
+  value: Joi.string().email().required().trim().lowercase(),
+});
+
+// --- Sub-schema cho phones ---
+const phoneSchema = Joi.object({
+  type: Joi.string().valid('Home', 'Company', 'Other').default('Other'),
+  value: Joi.string().required().trim(),
+});
+
 // --- CREATE CUSTOMER ---
 const create = {
   body: Joi.object().keys({
     email: Joi.string().required().email().trim().lowercase(),
     name: Joi.string().required().trim(),
-    phone: Joi.string().required().trim(),
     gender: Joi.string().valid('male', 'female', 'other').default('other'),
     birthDate: Joi.date().optional(),
+
+    // thêm nhiều email & phone
+    emails: Joi.array().items(emailSchema),
+    phones: Joi.array().items(phoneSchema),
+
     addresses: Joi.array().items(addressSchema),
     isActive: Joi.boolean().default(true),
   }),
@@ -63,9 +80,13 @@ const updateById = {
     .keys({
       email: Joi.string().email().trim().lowercase(),
       name: Joi.string().trim(),
-      phone: Joi.string().trim(),
       gender: Joi.string().valid('male', 'female', 'other'),
       birthDate: Joi.date(),
+
+      // thêm nhiều email & phone
+      emails: Joi.array().items(emailSchema),
+      phones: Joi.array().items(phoneSchema),
+
       addresses: Joi.array().items(addressSchema),
       isActive: Joi.boolean(),
     })

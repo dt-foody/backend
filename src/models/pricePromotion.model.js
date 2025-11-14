@@ -39,6 +39,9 @@ const PricePromotionSchema = new Schema(
     // Trạng thái
     isActive: { type: Boolean, default: true },
 
+    // Độ ưu tiên của khuyến mãi
+    priority: { type: Number, default: 0 },
+
     // Audit
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     isDeleted: { type: Boolean, default: false },

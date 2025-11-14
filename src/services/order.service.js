@@ -1,75 +1,193 @@
 const BaseService = require('../utils/_base.service');
-const { Order } = require('../models');
+const { Order, Product, Combo, Coupon } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 
 class OrderService extends BaseService {
   constructor() {
     super(Order);
-    this.payos = getPayOS(); // ✅ dùng instance chung
+    this.payos = getPayOS();
+
     this.customerOrder = this.customerOrder.bind(this);
   }
 
-  async customerOrder(payload) {
-    const orderCode = Date.now(); // ✅ numeric orderCode
-    const paymentMethod = payload.payment && payload.payment.method || 'cash';
+  /* ============================================================
+   * Convert FE options → flat array
+   * ============================================================*/
+  _normalizeOptions(optionsObj) {
+    if (!optionsObj || typeof optionsObj !== "object") return [];
 
-    const orderData = {
-      ...payload,
-      orderCode,
-      status: 'pending',
-      payment: {
-        ...(payload.payment || {}),
-        status: 'pending',
-      },
-    };
+    const normalized = [];
 
-    let qrInfo = null;
-
-    if (paymentMethod === 'payos') {
-      try {
-        const qr = await this.generatePayOSQR({
-          amount: payload.grandTotal,
-          orderCode,
-          description: `Order #${orderCode}`,
+    for (const groupName in optionsObj) {
+      for (const opt of optionsObj[groupName]) {
+        normalized.push({
+          groupName,
+          optionName: opt.name,
+          priceModifier: opt.priceModifier || 0,
         });
-
-        qrInfo = qr;
-        orderData.payment.transactionId = qr.transactionId;
-        orderData.payment.qrCode = qr.qrCode;
-        orderData.payment.checkoutUrl = qr.checkoutUrl;
-      } catch (err) {
-        console.error('PayOS Error:', err.message);
-        throw new Error('Không thể tạo mã QR thanh toán. Vui lòng thử lại sau.');
       }
     }
 
+    return normalized;
+  }
+
+  /* ============================================================
+   * CUSTOMER ORDER
+   * ============================================================*/
+  async customerOrder(payload) {
+    const { items, appliedCoupons } = payload;
+
+    const orderItems = [];
+
+    /* ============================================================
+     * 1) Build lại từng OrderItem từ DB
+     * ============================================================*/
+    for (const cartItem of items) {
+      let basePrice = 0;
+      let finalPrice = 0;
+      let normalizedOptions = [];
+
+      /* ------------------------------------------------------------
+       * PRODUCT
+       * ------------------------------------------------------------*/
+      if (cartItem.itemType === "Product") {
+        const product = await Product.findById(cartItem.item.id);
+        if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
+
+        // snapshot giá
+        basePrice = product.basePrice;
+        finalPrice = product.basePrice;
+
+        // tính lại options
+        normalizedOptions = this._normalizeOptions(cartItem.options);
+        for (const opt of normalizedOptions) {
+          finalPrice += opt.priceModifier;
+        }
+
+        orderItems.push({
+          item: product._id,
+          itemType: "Product",
+          name: product.name,
+          quantity: cartItem.quantity,
+
+          basePrice,
+          price: finalPrice,
+
+          options: normalizedOptions,
+          comboSelections: [],
+
+          note: cartItem.note || "",
+        });
+      }
+
+      /* ------------------------------------------------------------
+       * COMBO
+       * ------------------------------------------------------------*/
+      if (cartItem.itemType === "Combo") {
+        const combo = await Combo.findById(cartItem.item.id);
+        if (!combo) throw new Error(`Combo không tồn tại: ${cartItem.item.name}`);
+
+        // snapshot giá
+        basePrice = combo.comboPrice;
+        finalPrice = combo.comboPrice;
+
+        orderItems.push({
+          item: combo._id,
+          itemType: "Combo",
+          name: combo.name,
+          quantity: cartItem.quantity,
+
+          basePrice,
+          price: finalPrice,
+
+          options: [],
+          comboSelections: [], // (bạn có thể thêm sau)
+
+          note: cartItem.note || "",
+        });
+      }
+    }
+
+    /* ============================================================
+     * 2) VERIFY & LOAD COUPONS
+     * ============================================================*/
+    const appliedCouponDocs = [];
+
+    for (const cp of appliedCoupons || []) {
+      const coupon = await Coupon.findById(cp.id);
+      if (!coupon) throw new Error(`Coupon không hợp lệ: ${cp.code}`);
+
+      appliedCouponDocs.push({
+        id: coupon._id,
+        code: coupon.code,
+        type: coupon.type,
+        value: coupon.value,
+      });
+    }
+
+    /* ============================================================
+     * 3) CREATE ORDER
+     * ============================================================*/
+    const orderCode = Date.now();
+
+    const orderData = {
+      ...payload,
+      items: orderItems,
+      appliedCoupons: appliedCouponDocs,
+      orderCode,
+
+      payment: {
+        method: payload.payment.method,
+        status: "pending",
+      },
+
+      status: "pending",
+    };
+
+    /* ============================================================
+     * 4) PAYOS (optional)
+     * ============================================================*/
+    if (payload.payment.method === "payos") {
+      const qr = await this.generatePayOSQR({
+        amount: payload.grandTotal,
+        orderCode,
+        description: `Order #${orderCode}`,
+      });
+
+      orderData.payment.transactionId = qr.transactionId;
+      orderData.payment.qrCode = qr.qrCode;
+      orderData.payment.checkoutUrl = qr.checkoutUrl;
+    }
+
+    /* ============================================================
+     * 5) SAVE ORDER
+     * ============================================================*/
     const order = await this.model.create(orderData);
 
     return {
       message:
-        paymentMethod === 'payos'
-          ? 'Tạo đơn hàng thành công. Vui lòng quét mã QR để thanh toán.'
-          : 'Tạo đơn hàng thành công, chờ xác nhận từ hệ thống.',
+        payload.payment.method === "payos"
+          ? "Tạo đơn thành công, vui lòng quét QR."
+          : "Tạo đơn thành công.",
       order,
-      qrInfo,
     };
   }
 
+  /* ============================================================
+   * PAYOS HELPER
+   * ============================================================*/
   async generatePayOSQR({ amount, orderCode, description }) {
     const result = await this.payos.paymentRequests.create({
-      orderCode,
       amount,
+      orderCode,
       description,
-      returnUrl:
-        config.payos.redirect_payment_success ||
-        'https://yourdomain.com/payment-success',
-      cancelUrl:
-        config.payos.redirect_payment_cancel ||
-        'https://yourdomain.com/payment-cancel',
+      returnUrl: config.payos.redirect_payment_success,
+      cancelUrl: config.payos.redirect_payment_cancel,
     });
 
-    const data = result.data ? result.data : result;
+    const data = result.data || result;
+
     return {
       transactionId: data.id || data.transactionId,
       qrCode: data.qrCode,

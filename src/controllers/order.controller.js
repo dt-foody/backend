@@ -17,28 +17,9 @@ class OrderController extends BaseController {
   async customerOrder(req, res) {
     const data = { ...req.body };
 
-    const userId = req.user.id || req.user._id;
+    data.profileType = req.user.profileType;
+    data.profile = req.user.profile._id || req.user.profile.id;
 
-    if (req.user.role === 'customer') {
-      const customer = await customerService.findOne({ user: userId });
-
-      if (!customer) {
-        throw new ApiError(NOT_FOUND, 'Customer not found');
-      }
-
-      data.profileType = 'Customer';
-      data.profile = customer._id || customer.id;
-    } else {
-      const employee = await employeeService.findOne({ user: userId });
-      
-      if (!employee) {
-        throw new ApiError(NOT_FOUND, 'Employee not found');
-      }
-
-      data.profileType = 'Employee';
-      data.profile = employee._id || employee.id;
-    }
-    
     const result = await this.service.customerOrder(data);
     return res.status(OK).json(result);
   }

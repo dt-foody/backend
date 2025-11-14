@@ -12,7 +12,6 @@ class BlogPostController extends BaseController {
 
     this.findBySlug = catchAsync(this.findBySlug.bind(this));
     this.groupByCategory = catchAsync(this.groupByCategory.bind(this));
-
   }
 
   async findBySlug(req, res) {

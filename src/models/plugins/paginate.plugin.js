@@ -43,6 +43,10 @@ const paginate = (schema) => {
       docsPromise = docsPromise.populate(options.populate);
     }
 
+    if (options.lean) {
+      docsPromise = docsPromise.lean();
+    }
+
     docsPromise = docsPromise.exec();
 
     return Promise.all([countPromise, docsPromise]).then((values) => {

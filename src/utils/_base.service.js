@@ -12,7 +12,7 @@ class BaseService {
     return this.model.countDocuments(query);
   }
 
-  async findAll(query = {}, options = { populate: '', select: '', lean: false, limit: 20 }) {
+  async findAll(query = {}, options = { sortBy: '', populate: '', select: '', lean: false, limit: 20 }) {
     // Tạo một bản sao của query để tránh sửa đổi tham số đầu vào
     const modifiedQuery = { ...query };
 
@@ -29,7 +29,19 @@ class BaseService {
       modifiedQuery.isActive = true;
     }
 
-    let dbQuery = this.model.find(modifiedQuery);
+    let sort = '';
+    if (options.sortBy) {
+      const sortingCriteria = [];
+      options.sortBy.split(',').forEach((sortOption) => {
+        const [key, order] = sortOption.split(':');
+        sortingCriteria.push((order === 'desc' ? '-' : '') + key);
+      });
+      sort = sortingCriteria.join(' ');
+    } else {
+      sort = 'createdAt';
+    }
+
+    let dbQuery = this.model.find(modifiedQuery).sort(sort);
 
     if (options.select) dbQuery = dbQuery.select(options.select);
 
@@ -82,7 +94,7 @@ class BaseService {
     return dbQuery;
   }
 
-  async paginate(query = {}, options = { page: 1, limit: 20 }) {
+  async paginate(query = {}, options = { page: 1, limit: 20, lean: true }) {
     const modifiedQuery = { ...query };
 
     if (this.model.schema.path('isDeleted') && modifiedQuery.isDeleted === undefined) {
@@ -107,6 +119,7 @@ class BaseService {
 
     safeOptions.page = Math.max(safeOptions.page || 1, 1);
     safeOptions.limit = Math.max(safeOptions.limit || 20, 1);
+    // safeOptions.lean = true;
 
     return this.model.paginate(modifiedQuery, safeOptions);
   }

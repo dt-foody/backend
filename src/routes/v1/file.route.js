@@ -36,12 +36,12 @@ router.post('/upload', upload.single('file'), (req, res) => {
 });
 
 // 🧩 API truy cập file (phục vụ public folder)
-router.get('/public/:filename', (req, res) => {
-  const filePath = path.join(uploadDir, req.params.filename);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ message: 'File not found' });
-  }
-  res.sendFile(filePath);
-});
+// router.get('/public/:filename', (req, res) => {
+//   const filePath = path.join(uploadDir, req.params.filename);
+//   if (!fs.existsSync(filePath)) {
+//     return res.status(404).json({ message: 'File not found' });
+//   }
+//   res.sendFile(filePath);
+// });
 
 module.exports = router;

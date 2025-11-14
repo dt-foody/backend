@@ -20,6 +20,13 @@ const userSchema = new Schema(
         }
       },
     },
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     password: {
       type: String,
       required: true,

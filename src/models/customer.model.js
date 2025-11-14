@@ -1,5 +1,6 @@
 // models/customer.model.js
 const mongoose = require('mongoose');
+const validator = require('validator');
 const { toJSON, paginate } = require('./plugins');
 const Counter = require('./counter.model');
 
@@ -13,9 +14,50 @@ const CustomerSchema = new Schema(
 
     // --- THÔNG TIN XÁC THỰC & CƠ BẢN ---
     name: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
+
     gender: { type: String, enum: ['male', 'female', 'other'], default: 'other' },
     birthDate: { type: Date },
+
+    // ✉️ EMAILS — mảng gồm type và value
+    emails: [
+      {
+        _id: false,
+        type: {
+          type: String,
+          enum: ['Home', 'Company', 'Other'],
+          default: 'Other',
+        },
+        value: {
+          type: String,
+          required: true,
+          trim: true,
+          lowercase: true,
+          validate: {
+            validator: (v) => validator.isEmail(v),
+            message: (props) => `${props.value} is not a valid email address!`,
+          },
+        },
+        isPrimary: { type: Boolean, default: false },
+      },
+    ],
+
+    // 📞 PHONES — mảng gồm type và value
+    phones: [
+      {
+        _id: false,
+        type: {
+          type: String,
+          enum: ['Home', 'Company', 'Other'],
+          default: 'Other',
+        },
+        value: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        isPrimary: { type: Boolean, default: false },
+      },
+    ],
 
     // --- ĐỊA CHỈ GIAO HÀNG ---
     addresses: [
@@ -26,6 +68,7 @@ const CustomerSchema = new Schema(
         recipientPhone: { type: String, required: true },
         street: { type: String, required: true },
         ward: { type: String, required: true },
+        district: { type: String, required: true },
         city: { type: String, required: true },
         fullAddress: { type: String },
         location: {
@@ -65,6 +108,9 @@ CustomerSchema.pre('save', async function (next) {
   }
   next();
 });
+
+CustomerSchema.index({ 'emails.value': 1 });
+CustomerSchema.index({ 'phones.value': 1 });
 
 // --- PLUGIN ---
 CustomerSchema.plugin(toJSON);

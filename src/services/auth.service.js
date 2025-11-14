@@ -43,41 +43,47 @@ const register = async (subdomain, userBody) => {
       isEmailVerified: false, // Mặc định là chưa xác thực
     });
 
+    const dataProfile = { ...userBody };
+    if (userBody.email) {
+      dataProfile.emails = [
+        {
+          type: 'Other',
+          value: userBody.email,
+          isPrimary: true,
+        },
+      ];
+    }
+
+    if (userBody.phone) {
+      dataProfile.phones = [
+        {
+          type: 'Other',
+          value: userBody.phone,
+          isPrimary: true,
+        },
+      ];
+    }
+
     // 4. TẠO PROFILE (Customer hoặc Employee cho thông tin nghiệp vụ)
     try {
       if (isAdmin) {
-        // Nếu là admin, tạo Employee
-        // Sử dụng employeeService.createEmployee
-        const employee = await employeeService.create({
-          ...userBody, // Truyền tất cả thông tin profile (name, phone, gender...)
-          user: newUser._id, // Đây là liên kết 1-1 quan trọng
-        });
+        const employee = await employeeService.create(dataProfile);
 
         newUser.profileType = 'Employee';
         newUser.profile = employee._id;
       } else {
-        // Nếu là customer, tạo Customer
-        // Sử dụng customerService.createCustomer
-        const customer = await customerService.create({
-          ...userBody, // Truyền tất cả thông tin profile (name, phone, addresses...)
-          user: newUser._id, // Đây là liên kết 1-1 quan trọng
-        });
+        const customer = await customerService.create(dataProfile);
 
         newUser.profileType = 'Customer';
         newUser.profile = customer._id;
-      
       }
     } catch (profileError) {
-      // 6. ROLLBACK THỦ CÔNG:
       // Nếu tạo Profile thất bại, ta phải xóa User đã tạo
       await userService.deleteHardById(newUser._id);
 
       // Ném lỗi ban đầu của Profile ra ngoài
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Không thể tạo hồ sơ: ${profileError.message}`);
     }
-
-    // (Tùy chọn: Gửi email xác thực ở đây)
-    // await emailService.sendVerificationEmail(newUser.email, verifyToken);
   } catch (error) {
     // 7. Bắt lỗi (từ userService.createUser hoặc từ lỗi rollback)
     if (error instanceof ApiError) {
