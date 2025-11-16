@@ -34,21 +34,24 @@ const OrderItemComboSelectionSchema = new Schema(
 /* ============================================================
  * 3. OrderItem Schema
  * ============================================================ */
-const OrderItemSchema = new Schema({
-  item: { type: Schema.Types.ObjectId, refPath: 'itemType', required: true },
-  itemType: { type: String, enum: ['Product', 'Combo'], required: true },
+const OrderItemSchema = new Schema(
+  {
+    item: { type: Schema.Types.ObjectId, refPath: 'itemType', required: true },
+    itemType: { type: String, enum: ['Product', 'Combo'], required: true },
 
-  name: { type: String, required: true },
-  quantity: { type: Number, required: true, min: 1 },
+    name: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 1 },
 
-  basePrice: { type: Number, required: true, min: 0 },
-  price: { type: Number, required: true, min: 0 },
+    basePrice: { type: Number, required: true, min: 0 },
+    price: { type: Number, required: true, min: 0 },
 
-  options: [OrderItemOptionSchema],
-  comboSelections: [OrderItemComboSelectionSchema],
+    options: [OrderItemOptionSchema],
+    comboSelections: [OrderItemComboSelectionSchema],
 
-  note: { type: String, default: '' },
-});
+    note: { type: String, default: '' },
+  },
+  { _id: false }
+);
 
 /* ============================================================
  * 4. Main Order Schema
@@ -60,6 +63,11 @@ const OrderSchema = new Schema(
 
     // Mã order PayOS sử dụng
     orderCode: { type: Number, index: true }, // 🔥 THÊM TRƯỜNG NÀY
+    orderType: {
+      type: String,
+      enum: ['', 'TakeAway', 'DineIn', 'Delivery'],
+      default: '',
+    },
 
     profileType: {
       type: String,
@@ -98,20 +106,26 @@ const OrderSchema = new Schema(
     },
 
     shipping: {
-      address: {
-        label: String,
-        recipientName: String,
-        recipientPhone: String,
-        street: String,
-        ward: String,
-        district: String,
-        city: String,
-      },
-      status: {
-        type: String,
-        enum: ['pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled'],
-        default: 'pending',
-      },
+      type: new Schema(
+        {
+          address: {
+            label: String,
+            recipientName: String,
+            recipientPhone: String,
+            street: String,
+            ward: String,
+            district: String,
+            city: String,
+          },
+          status: {
+            type: String,
+            enum: ['pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled'],
+            default: 'pending',
+          },
+        },
+        { _id: false }
+      ),
+      default: null,
     },
 
     status: {

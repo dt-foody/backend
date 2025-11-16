@@ -108,6 +108,31 @@ const customerOrder = {
     shipping: shippingSchema.allow(null),
 
     note: Joi.string().allow('', null).default(''),
+    orderType: Joi.string().allow('', null).default(''),
+    channel: Joi.string().allow('', null).default(''),
+  }),
+};
+
+const adminPanelOrder = {
+  body: Joi.object({
+    profile: Joi.string(),
+    profileType: Joi.string(),
+    status: Joi.string(),
+    items: Joi.array().items(createOrderItemSchema).min(1).required(),
+
+    appliedCoupons: Joi.array().items(appliedCouponSchema).default([]),
+
+    totalAmount: Joi.number().min(0).required(),
+    discountAmount: Joi.number().min(0).default(0),
+    shippingFee: Joi.number().min(0).default(0),
+    grandTotal: Joi.number().min(0).required(),
+
+    payment: paymentSchema.required(),
+    shipping: shippingSchema.allow(null),
+
+    note: Joi.string().allow('', null).default(''),
+    orderType: Joi.string().allow('', null).default(''),
+    channel: Joi.string().allow('', null).default(''),
   }),
 };
 
@@ -147,6 +172,9 @@ const create = {
     status: Joi.string()
       .valid('pending', 'confirmed', 'preparing', 'ready', 'delivering', 'completed', 'canceled', 'refunded')
       .default('pending'),
+
+    orderType: Joi.string().allow('', null).default(''),
+    channel: Joi.string().allow('', null).default(''),
 
     note: Joi.string().allow('', null).default(''),
     createdBy: Joi.string().custom(objectId).allow(null),
@@ -224,6 +252,8 @@ const updateById = {
     payment: paymentSchema,
     shipping: shippingSchema.allow(null),
     note: Joi.string().allow('', null),
+    orderType: Joi.string(),
+    channel: Joi.string(),
 
     discountAmount: Joi.number().min(0),
     shippingFee: Joi.number().min(0),
@@ -251,6 +281,7 @@ const deleteMany = {
 module.exports = {
   create,
   customerOrder,
+  adminPanelOrder,
   paginate: paginateOrders,
   findById,
   getByOrderId,

@@ -1,6 +1,8 @@
 const BaseRoute = require('../../utils/_base.route');
 const { orderController } = require('../../controllers/index');
 const { orderValidation } = require('../../validations/index');
+const auth = require('../../middlewares/auth'); // Import auth middleware
+const validate = require('../../middlewares/validate');
 
 function list(req, res, next) {
   const { paymentStatus, shippingStatus, search } = req.query;
@@ -51,6 +53,13 @@ class OrderRoute extends BaseRoute {
       deleteManyById: [deleteManyById],
     };
     super(orderController, orderValidation, 'order', middlewares); // Truyền controller, validation và resource
+
+    this.router.post(
+      '/admin-order',
+      auth(),
+      validate(orderValidation.adminPanelOrder),
+      this.controller.adminPanelOrder.bind(this.controller)
+    );
   }
 }
 

@@ -8,23 +8,20 @@ class OrderService extends BaseService {
     super(Order);
     this.payos = getPayOS();
 
-    this.customerOrder = this.customerOrder.bind(this);
+    // Bind methods
+    this.createOrder = this.createOrder.bind(this);
+    this.createAdminOrder = this.createAdminOrder.bind(this);
+    this.updateOrder = this.updateOrder.bind(this);
   }
 
-  /**
-   * Chuyển đổi object options từ FE sang mảng phẳng (flat array)
-   * @param {object} optionsObj - Đối tượng options từ FE (vd: { Size: [...], Topping: [...] })
-   * @returns {Array} - Mảng options đã được làm phẳng
-   */
-  static _normalizeOptions(optionsObj) {
+  /* ============================================================
+   * 0. Chuẩn hoá options
+   * ============================================================ */
+  static normalizeOptions(optionsObj) {
     if (!optionsObj || typeof optionsObj !== 'object') return [];
 
-    // Dùng Object.entries().flatMap() để duyệt và làm phẳng mảng
-    // Vd: [ ['Topping', [opt1, opt2]], ['Size', [opt3]] ]
-    // -> [ {groupName: 'Topping', ...}, {groupName: 'Topping', ...}, {groupName: 'Size', ...} ]
-    return Object.entries(optionsObj).flatMap(([groupName, optionsArray]) => {
-      // .map bên trong để biến đổi từng option
-      return optionsArray.map((opt) => ({
+    return Object.entries(optionsObj).flatMap(([groupName, options]) => {
+      return options.map((opt) => ({
         groupName,
         optionName: opt.name,
         priceModifier: opt.priceModifier || 0,
@@ -32,202 +29,185 @@ class OrderService extends BaseService {
     });
   }
 
-  /**
-   * Xử lý đơn hàng từ phía khách hàng (Frontend)
-   * @param {object} payload - Dữ liệu đơn hàng từ FE (đã qua Joi validation)
-   * @returns {Promise<object>} - Kết quả tạo đơn hàng
-   */
-  async customerOrder(payload) {
-    const { items, appliedCoupons } = payload;
+  /* ============================================================
+   * 1. Build lại items từ DB (Product + Combo)
+   * ============================================================ */
+  static async buildOrderItems(items) {
+    return Promise.all(
+      items.map(async (cartItem) => {
+        let finalPrice = 0;
 
-    /* ============================================================
-     * 1) Xây dựng lại Order Items từ DB (Dùng Promise.all)
-     * ============================================================ */
-    const orderItemPromises = items.map(async (cartItem) => {
-      let basePrice = 0;
-      let finalPrice = 0;
+        /* ---------------- PRODUCT ------------------- */
+        if (cartItem.itemType === 'Product') {
+          const product = await Product.findById(cartItem.item.id);
+          if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
 
-      /* ------------------------------------------------------------
-       * TRƯỜNG HỢP 1: SẢN PHẨM (PRODUCT)
-       * ------------------------------------------------------------*/
-      if (cartItem.itemType === 'Product') {
-        const product = await Product.findById(cartItem.item.id);
-        if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
-
-        basePrice = product.basePrice;
-
-        // Chuẩn hóa options
-        const normalizedOptions = OrderService._normalizeOptions(cartItem.options);
-        // Tính tổng giá options bằng .reduce()
-        const optionsPrice = normalizedOptions.reduce((sum, opt) => sum + opt.priceModifier, 0);
-
-        finalPrice = basePrice + optionsPrice;
-
-        // Trả về object cho mảng items của Order
-        return {
-          item: product._id,
-          itemType: 'Product',
-          name: product.name, // Snapshot tên sản phẩm
-          quantity: cartItem.quantity,
-          basePrice, // Snapshot giá gốc
-          price: finalPrice, // Giá cuối cùng đã tính lại
-          options: normalizedOptions,
-          comboSelections: [], // Product không có combo selections
-          note: cartItem.note || '',
-        };
-      }
-
-      /* ------------------------------------------------------------
-       * TRƯỜNG HỢP 2: COMBO
-       * ------------------------------------------------------------*/
-      if (cartItem.itemType === 'Combo') {
-        const combo = await Combo.findById(cartItem.item.id);
-        if (!combo) throw new Error(`Combo không tồn tại: ${cartItem.item.name}`);
-
-        basePrice = combo.comboPrice; // Giá gốc của combo (thường là 0)
-
-        // Xử lý các sản phẩm con (selections) bên trong combo song song
-        const selectionPromises = cartItem.comboSelections.map(async (selection) => {
-          const product = await Product.findById(selection.product.id);
-          if (!product) {
-            throw new Error(`Sản phẩm "${selection.product.name}" trong combo "${combo.name}" không tồn tại`);
-          }
-
-          // Tính giá options của sản phẩm con
-          const normalizedOptions = OrderService._normalizeOptions(selection.options);
-          const optionsPrice = normalizedOptions.reduce((sum, opt) => sum + opt.priceModifier, 0);
-
-          // Giá của selection này = giá gốc sp + giá options
-          const selectionPrice = product.basePrice + optionsPrice;
+          const normalizedOptions = OrderService.normalizeOptions(cartItem.options);
+          const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
+          finalPrice = product.basePrice + optionsPrice;
 
           return {
-            // Dữ liệu để lưu vào mảng comboSelections
-            data: {
-              // ✅ SỬA LỖI MONGOOSE TẠI ĐÂY
-              product: product._id, // Khớp với model: 'product'
-              productName: product.name, // Khớp với model: 'productName'
-
-              basePrice: product.basePrice, // Snapshot giá gốc sp con
-              options: normalizedOptions, // Options của sp con
-              slotName: selection.slotName,
-            },
-            // Giá của selection này (để cộng vào giá tổng của combo)
-            price: selectionPrice,
+            item: product._id,
+            itemType: 'Product',
+            name: product.name,
+            quantity: cartItem.quantity,
+            basePrice: product.basePrice,
+            price: finalPrice,
+            options: normalizedOptions,
+            comboSelections: [],
+            note: cartItem.note || '',
           };
-        });
+        }
 
-        // Chờ tất cả sản phẩm con được xử lý
-        const resolvedSelections = await Promise.all(selectionPromises);
+        /* ---------------- COMBO ------------------- */
+        if (cartItem.itemType === 'Combo') {
+          const combo = await Combo.findById(cartItem.item.id);
+          if (!combo) throw new Error(`Combo không tồn tại: ${cartItem.item.name}`);
 
-        // Tính tổng giá của các sản phẩm con
-        const totalSelectionsPrice = resolvedSelections.reduce((sum, s) => sum + s.price, 0);
-        // Giá cuối cùng của combo = giá gốc combo + tổng giá các sp con
-        finalPrice = basePrice + totalSelectionsPrice;
+          const selectionPromises = cartItem.comboSelections.map(async (selection) => {
+            const product = await Product.findById(selection.product.id);
+            if (!product) throw new Error(`Sản phẩm "${selection.product.name}" trong combo "${combo.name}" không tồn tại`);
 
-        // Lấy mảng dữ liệu data của các selection đã xử lý
-        const normalizedComboSelections = resolvedSelections.map((s) => s.data);
+            const normalizedOptions = OrderService.normalizeOptions(selection.options);
+            const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
+            const selectionPrice = product.basePrice + optionsPrice;
 
-        // Trả về object cho mảng items của Order
+            return {
+              data: {
+                product: product._id,
+                productName: product.name,
+                basePrice: product.basePrice,
+                options: normalizedOptions,
+                slotName: selection.slotName,
+              },
+              price: selectionPrice,
+            };
+          });
+
+          const resolved = await Promise.all(selectionPromises);
+          const totalSelectionsPrice = resolved.reduce((s, r) => s + r.price, 0);
+          finalPrice = combo.comboPrice + totalSelectionsPrice;
+
+          return {
+            item: combo._id,
+            itemType: 'Combo',
+            name: combo.name,
+            quantity: cartItem.quantity,
+            basePrice: combo.comboPrice,
+            price: finalPrice,
+            options: [],
+            comboSelections: resolved.map((r) => r.data),
+            note: cartItem.note || '',
+          };
+        }
+
+        throw new Error('Loại item không xác định.');
+      })
+    );
+  }
+
+  /* ============================================================
+   * 2. Build coupons
+   * ============================================================ */
+  static async buildAppliedCoupons(appliedCoupons = []) {
+    return Promise.all(
+      appliedCoupons.map(async (cp) => {
+        const coupon = await Coupon.findById(cp.id);
+        if (!coupon) throw new Error(`Coupon không hợp lệ: ${cp.code}`);
+
         return {
-          item: combo._id,
-          itemType: 'Combo',
-          name: combo.name, // Snapshot tên combo
-          quantity: cartItem.quantity,
-          basePrice, // Snapshot giá gốc combo
-          price: finalPrice, // Giá cuối cùng đã tính lại
-          options: [], // Combo không có options
-          comboSelections: normalizedComboSelections, // Mảng các sp con
-          note: cartItem.note || '',
+          id: coupon._id,
+          code: coupon.code,
+          type: coupon.type,
+          value: coupon.value,
         };
-      }
+      })
+    );
+  }
 
-      // Trường hợp này không bao giờ xảy ra nếu Joi validation hoạt động
-      throw new Error('Loại item không xác định.');
-    });
+  /* ============================================================
+   * 3. Gom toàn bộ logic tạo orderObject
+   * ============================================================ */
+  async prepareOrderData(payload) {
+    const { items, appliedCoupons } = payload;
 
-    // Chờ tất cả order items (products và combos) được xử lý song song
-    const orderItems = await Promise.all(orderItemPromises);
+    const orderItems = await OrderService.buildOrderItems(items);
+    const couponDocs = await OrderService.buildAppliedCoupons(appliedCoupons);
 
-    /* ============================================================
-     * 2) Xác thực và Tải thông tin Coupons (Dùng Promise.all)
-     * ============================================================ */
-    const couponPromises = (appliedCoupons || []).map(async (cp) => {
-      const coupon = await Coupon.findById(cp.id);
-      if (!coupon) throw new Error(`Coupon không hợp lệ: ${cp.code}`);
-      // (TODO: Thêm logic check điều kiện coupon nếu cần)
+    const orderCode = Date.now();
 
-      // Snapshot lại thông tin coupon
-      return {
-        id: coupon._id,
-        code: coupon.code,
-        type: coupon.type,
-        value: coupon.value,
-      };
-    });
-
-    const appliedCouponDocs = await Promise.all(couponPromises);
-
-    /* ============================================================
-     * 3) Tạo dữ liệu Order cuối cùng
-     * ============================================================ */
-    const orderCode = Date.now(); // Dùng cho PayOS
-
-    const orderData = {
-      ...payload, // Lấy shipping, note, totalAmount, grandTotal... từ FE
-      items: orderItems, // Ghi đè bằng items đã xác thực
-      appliedCoupons: appliedCouponDocs, // Ghi đè bằng coupons đã xác thực
+    const data = {
+      ...payload,
+      items: orderItems,
+      appliedCoupons: couponDocs,
       orderCode,
       payment: {
         method: payload.payment.method,
-        status: 'pending', // Luôn là pending khi mới tạo
+        status: 'pending',
       },
-      status: 'pending', // Trạng thái đơn hàng
-      // profile: req.user.id, // (Bạn nên gán profile user ở đây nếu có)
+      status: 'pending',
     };
 
-    /* ============================================================
-     * 4) Tạo link thanh toán PayOS (Nếu có)
-     * ============================================================ */
     if (payload.payment.method === 'payos') {
-      // CẢNH BÁO: `payload.grandTotal` là giá từ FE.
-      // Bạn NÊN tính toán lại `grandTotal` ở backend
-      // dựa trên `orderItems`, `shippingFee` và `appliedCouponDocs`
-      // để đảm bảo bảo mật 100%.
       const qr = await this.generatePayOSQR({
-        amount: payload.grandTotal, // Tạm thời tin tưởng FE
+        amount: payload.grandTotal,
         orderCode,
-        description: `Thanh toan don hang #${orderCode}`,
+        description: `Thanh toán đơn hàng #${orderCode}`,
       });
 
-      orderData.payment.transactionId = qr.transactionId;
-      orderData.payment.qrCode = qr.qrCode;
-      orderData.payment.checkoutUrl = qr.checkoutUrl;
+      data.payment.transactionId = qr.transactionId;
+      data.payment.qrCode = qr.qrCode;
+      data.payment.checkoutUrl = qr.checkoutUrl;
     }
 
-    /* ============================================================
-     * 5) Lưu Order vào DB
-     * ============================================================ */
+    return data;
+  }
+
+  /* ============================================================
+   * 4. CREATE ORDER (FE)
+   * ============================================================ */
+  async createOrder(payload) {
+    const orderData = await OrderService.prepareOrderData(payload);
     const order = await this.model.create(orderData);
 
-    // (TODO: Cập nhật tồn kho, tăng số lần dùng coupon...)
-
-    // Trả về kết quả
     return {
-      message: payload.payment.method === 'payos' ? 'Tạo đơn thành công, vui lòng quét QR.' : 'Tạo đơn thành công.',
+      message: orderData.payment.method === 'payos' ? 'Tạo đơn thành công, vui lòng quét QR.' : 'Tạo đơn thành công.',
       order,
-      qrInfo:
-        payload.payment.method === 'payos'
-          ? {
-              transactionId: orderData.payment.transactionId,
-              qrCode: orderData.payment.qrCode,
-              checkoutUrl: orderData.payment.checkoutUrl,
-            }
-          : null,
     };
   }
 
   /* ============================================================
-   * PAYOS HELPER
+   * 5. CREATE ORDER (Admin Panel)
+   * ============================================================ */
+  async createAdminOrder(payload) {
+    const orderData = await OrderService.prepareOrderData(payload);
+    const order = await this.model.create(orderData);
+
+    return {
+      message: 'Admin đã tạo đơn thành công.',
+      order,
+    };
+  }
+
+  /* ============================================================
+   * 6. UPDATE ORDER (FE hoặc Admin)
+   * ============================================================ */
+  async updateOrder(id, payload) {
+    const order = await this.model.findById(id);
+    if (!order) throw new Error('Không tìm thấy đơn hàng.');
+
+    // Build lại items + coupons
+    const rebuiltData = await this.prepareOrderData(payload);
+
+    // Merge vào order hiện tại
+    Object.assign(order, rebuiltData);
+
+    await order.save();
+    return order;
+  }
+
+  /* ============================================================
+   * 7. PAYOS HELPER
    * ============================================================ */
   async generatePayOSQR({ amount, orderCode, description }) {
     const result = await this.payos.paymentRequests.create({
