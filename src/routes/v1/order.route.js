@@ -57,8 +57,14 @@ class OrderRoute extends BaseRoute {
     this.router.post(
       '/admin-order',
       auth(),
-      validate(orderValidation.adminPanelOrder),
-      this.controller.adminPanelOrder.bind(this.controller)
+      validate(orderValidation.adminPanelCreateOrder),
+      this.controller.adminPanelCreateOrder.bind(this.controller)
+    );
+    this.router.patch(
+      '/admin-order/:id',
+      auth(),
+      validate(orderValidation.adminPanelUpdateOrder),
+      this.controller.adminPanelUpdateOrder.bind(this.controller)
     );
   }
 }

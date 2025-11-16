@@ -113,7 +113,7 @@ const customerOrder = {
   }),
 };
 
-const adminPanelOrder = {
+const adminPanelCreateOrder = {
   body: Joi.object({
     profile: Joi.string(),
     profileType: Joi.string(),
@@ -134,6 +134,47 @@ const adminPanelOrder = {
     orderType: Joi.string().allow('', null).default(''),
     channel: Joi.string().allow('', null).default(''),
   }),
+};
+
+const adminPanelUpdateOrder = {
+  params: Joi.object({
+    id: Joi.string().custom(objectId).required(),
+  }),
+
+  body: Joi.object({
+    // Cho phép đổi / hoặc giữ nguyên
+    profile: Joi.string().custom(objectId).allow(null),
+    profileType: Joi.string().valid('Customer', 'Employee').allow(null),
+
+    status: Joi.string().valid(
+      'pending',
+      'confirmed',
+      'preparing',
+      'ready',
+      'delivering',
+      'completed',
+      'canceled',
+      'refunded'
+    ),
+
+    // ✅ items: OPTIONAL, nhưng nếu có thì phải >= 1
+    items: Joi.array().items(createOrderItemSchema).min(1),
+
+    // ✅ KHÔNG default([]), để phân biệt “không gửi” vs “gửi mảng rỗng”
+    appliedCoupons: Joi.array().items(appliedCouponSchema),
+
+    // ✅ Cho phép override discount / shipping, nếu không gửi thì dùng existing
+    discountAmount: Joi.number().min(0),
+    shippingFee: Joi.number().min(0),
+
+    // ✅ payment / shipping đều OPTIONAL, để mode meta-only không bắt buộc gửi
+    payment: paymentSchema,
+    shipping: shippingSchema.allow(null),
+
+    note: Joi.string().allow('', null),
+    orderType: Joi.string().allow('', null),
+    channel: Joi.string().allow('', null),
+  }).min(1), // Bắt buộc phải có ít nhất 1 field để update
 };
 
 // ... (Các schema khác giữ nguyên) ...
@@ -234,6 +275,8 @@ const updateById = {
   }),
 
   body: Joi.object({
+    profile: Joi.string(),
+    profileType: Joi.string(),
     status: Joi.string().valid(
       'pending',
       'confirmed',
@@ -281,7 +324,8 @@ const deleteMany = {
 module.exports = {
   create,
   customerOrder,
-  adminPanelOrder,
+  adminPanelCreateOrder,
+  adminPanelUpdateOrder,
   paginate: paginateOrders,
   findById,
   getByOrderId,

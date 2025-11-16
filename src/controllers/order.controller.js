@@ -10,7 +10,8 @@ class OrderController extends BaseController {
     super(orderService);
 
     this.customerOrder = catchAsync(this.customerOrder.bind(this));
-    this.adminPanelOrder = catchAsync(this.adminPanelOrder.bind(this));
+    this.adminPanelCreateOrder = catchAsync(this.adminPanelCreateOrder.bind(this));
+    this.adminPanelUpdateOrder = catchAsync(this.adminPanelUpdateOrder.bind(this));
     this.getByCode = catchAsync(this.getByCode.bind(this));
   }
 
@@ -25,12 +26,20 @@ class OrderController extends BaseController {
     return res.status(OK).json(result);
   }
 
-  async adminPanelOrder(req, res) {
+  async adminPanelCreateOrder(req, res) {
     const data = { ...req.body };
 
     data.createdBy = req.user._id || req.user.id;
 
-    const result = await this.service.adminPanelOrder(data);
+    const result = await this.service.adminPanelCreateOrder(data);
+    return res.status(OK).json(result);
+  }
+
+  async adminPanelUpdateOrder(req, res) {
+    const { id } = req.params;
+    const data = { ...req.body };
+
+    const result = await this.service.adminPanelUpdateOrder(id, data);
     return res.status(OK).json(result);
   }
 
