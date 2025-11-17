@@ -71,15 +71,13 @@ const OrderSchema = new Schema(
 
     profileType: {
       type: String,
-      required() {
-        return !!this.profile;
-      },
-      enum: ['Customer', 'Employee'],
+      enum: ['Customer', 'Employee', null],
+      default: null, // cho phép null
     },
     profile: {
       type: Schema.Types.ObjectId,
       refPath: 'profileType',
-      index: true,
+      default: null, // cho phép null
     },
 
     items: [OrderItemSchema],

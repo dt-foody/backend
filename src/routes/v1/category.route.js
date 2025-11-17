@@ -3,7 +3,7 @@ const { categoryController } = require('../../controllers/index');
 const { categoryValidation } = require('../../validations/index');
 
 function list(req, res, next) {
-  const { search } = req.query;
+  const { level, search } = req.query;
 
   if (search) {
     if (!req.query.$or) {
@@ -12,6 +12,13 @@ function list(req, res, next) {
     req.query.$or.push({ name: { $regex: search, $options: 'i' } }, { description: { $regex: search, $options: 'i' } });
     delete req.query.search;
   }
+
+  if (level === 1) {
+    req.query.parent = null;
+  }
+
+  delete req.query.level;
+
   next();
 }
 

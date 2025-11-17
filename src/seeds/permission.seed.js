@@ -18,12 +18,12 @@ const PERMISSIONS = {
   user: ['create', 'update', 'delete', 'read'],
   role: ['create', 'update', 'delete', 'read'],
   customer: ['create', 'update', 'delete', 'read'],
-  order: ['create', 'update', 'delete', 'read'],
   coupon: ['create', 'update', 'delete', 'read'],
   pricePromotion: ['create', 'update', 'delete', 'read'],
   blogPost: ['create', 'update', 'delete', 'read'],
   blogCategory: ['create', 'update', 'delete', 'read'],
   blogTag: ['create', 'update', 'delete', 'read'],
+  pos: ['create', 'update', 'delete', 'read'],
 };
 
 // Hàm tạo danh sách permissions theo resource/action

@@ -115,8 +115,8 @@ const customerOrder = {
 
 const adminPanelCreateOrder = {
   body: Joi.object({
-    profile: Joi.string(),
-    profileType: Joi.string(),
+    profile: Joi.string().allow(null),
+    profileType: Joi.string().allow(null),
     status: Joi.string(),
     items: Joi.array().items(createOrderItemSchema).min(1).required(),
 
