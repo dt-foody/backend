@@ -34,6 +34,8 @@ function paginate(req, res, next) {
 const router = express.Router();
 
 router.get('/', validate(orderValidation.paginate), auth(), queryMiddleware, paginate, orderController.paginate);
+router.get('/shipping-fee', validate(orderValidation.getShippingFee), orderController.getShippingFee);
+
 router.get(
   '/:code/by-code',
   validate(orderValidation.getByCode),

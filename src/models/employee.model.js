@@ -60,6 +60,7 @@ const EmployeeSchema = new Schema(
     // --- ĐỊA CHỈ GIAO HÀNG ---
     addresses: [
       {
+        _id: false,
         label: { type: String },
         recipientName: { type: String, required: true },
         recipientPhone: { type: String, required: true },

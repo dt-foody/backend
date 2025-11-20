@@ -3,6 +3,9 @@ const { Order, Product, Combo, Coupon } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 
+const { getDistanceInKm } = require('../utils/map.util'); // Import util bản đồ
+const { calculateShippingFeeByFormula } = require('../utils/shipping.util'); // Import util tính tiền
+
 class OrderService extends BaseService {
   constructor() {
     super(Order);
@@ -12,6 +15,23 @@ class OrderService extends BaseService {
     this.createOrder = this.createOrder.bind(this);
     this.adminPanelCreateOrder = this.adminPanelCreateOrder.bind(this);
     this.adminPanelUpdateOrder = this.adminPanelUpdateOrder.bind(this);
+    this.calculateShippingFee = this.calculateShippingFee.bind(this);
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  async calculateShippingFee(customerLocation) {
+    const storeLoc = config.hereMap.storeLocation;
+
+    // 1. Lấy khoảng cách từ Util
+    const distance = await getDistanceInKm(storeLoc, customerLocation);
+
+    // 2. Tính tiền từ Util
+    const shippingFee = calculateShippingFeeByFormula(distance);
+
+    return {
+      distance: parseFloat(distance.toFixed(2)),
+      shippingFee,
+    };
   }
 
   /* ============================================================
