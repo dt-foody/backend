@@ -29,8 +29,8 @@ const envVarsSchema = Joi.object()
     REDIRECT_PAYMENT_SUCCESS: Joi.string().description('PayOS Redirect Payment Success'),
     REDIRECT_PAYMENT_FAIL: Joi.string().description('PayOS Redirect Payment Cancel'),
     HERE_MAP_API_KEY: Joi.string().description('HERE Map API Key'),
-    STORE_LAT: Joi.number().default(10.7769).description('Store Latitude'), // Ví dụ: Chợ Bến Thành
-    STORE_LNG: Joi.number().default(106.7009).description('Store Longitude'),
+    STORE_LAT: Joi.number().default(21.01932585883329).description('Store Latitude'), // Ví dụ: Chợ Bến Thành
+    STORE_LNG: Joi.number().default(105.82209012013686).description('Store Longitude'),
   })
   .unknown();
 
