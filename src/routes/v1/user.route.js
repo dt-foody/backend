@@ -1,7 +1,7 @@
 const BaseRoute = require('../../utils/_base.route');
 const { userController } = require('../../controllers/index');
 const { userValidation } = require('../../validations/index');
-const auth = require('../../middlewares/auth'); // Import auth middleware
+const { auth } = require('../../middlewares/auth'); // Import auth middleware
 const validate = require('../../middlewares/validate');
 
 function list(req, res, next) {

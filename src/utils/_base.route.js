@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const auth = require('../middlewares/auth');
+const { auth } = require('../middlewares/auth');
 const queryMiddleware = require('../middlewares/queryMiddleware');
 const validate = require('../middlewares/validate');
 

@@ -15,6 +15,10 @@ class CouponController extends BaseController {
 
   // method chuẩn (prototype method) → ESLint/Node parse được
   async available(req, res) {
+    const { user } = req;
+
+    console.log("user", user);
+
     const now = new Date();
     const filter = {
       status: 'ACTIVE',

@@ -3,7 +3,7 @@ const httpStatus = require('http-status');
 const validate = require('../../../middlewares/validate');
 const orderValidation = require('../../../validations/order.validation');
 const orderController = require('../../../controllers/order.controller');
-const auth = require('../../../middlewares/auth');
+const { auth } = require('../../../middlewares/auth');
 const queryMiddleware = require('../../../middlewares/queryMiddleware');
 
 const { BAD_REQUEST } = httpStatus;

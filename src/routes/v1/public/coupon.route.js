@@ -1,5 +1,6 @@
 const express = require('express');
 const validate = require('../../../middlewares/validate');
+const { authOptional } = require('../../../middlewares/auth');
 const couponValidation = require('../../../validations/coupon.validation');
 const couponController = require('../../../controllers/coupon.controller');
 const queryMiddleware = require('../../../middlewares/queryMiddleware');
@@ -45,6 +46,6 @@ function paginate(req, res, next) {
 const router = express.Router();
 
 router.get('/', validate(couponValidation.paginate), queryMiddleware, paginate, couponController.paginate);
-router.get('/available', queryMiddleware, couponController.available);
+router.get('/available', authOptional(), queryMiddleware, couponController.available);
 
 module.exports = router;
