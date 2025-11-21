@@ -322,6 +322,7 @@ const getShippingFee = {
   query: Joi.object().keys({
     lat: Joi.number().required().min(-90).max(90).description('Vĩ độ (Latitude)'),
     lng: Joi.number().required().min(-180).max(180).description('Kinh độ (Longitude)'),
+    orderTime: Joi.date().iso().optional().description('Thời gian đặt hàng (ISO String)'),
   }),
 };
 

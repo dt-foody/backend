@@ -5,12 +5,14 @@ const moment = require('moment');
  * @param {number} distanceKm Quãng đường (km)
  * @returns {number} Tiền ship (VND)
  */
-const calculateShippingFeeByFormula = (distanceKm) => {
+const calculateShippingFeeByFormula = (distanceKm, orderTime = null) => {
   const x = distanceKm;
   let shippingFee = 0;
 
+  // [UPDATE] Nếu có orderTime truyền vào thì dùng, không thì dùng now
   // Sử dụng utcOffset(7) để cố định múi giờ Việt Nam (UTC+7)
-  const now = moment().utcOffset(7);
+  const timeToUse = orderTime ? moment(orderTime) : moment();
+  const now = timeToUse.utcOffset(7);
 
   const hour = now.hour();
   const dayOfWeek = now.day(); // 0: Sunday, 1: Monday, ..., 6: Saturday
@@ -25,7 +27,6 @@ const calculateShippingFeeByFormula = (distanceKm) => {
 
   if (isPeakHour) {
     // Công thức: 500*(x^2+5x+42)
-    // Sửa Math.pow(x, 2) thành x ** 2
     shippingFee = 500 * (x ** 2 + 5 * x + 42);
   } else if (isNightHour) {
     // Công thức: 500*(x^2+x+44)

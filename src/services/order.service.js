@@ -19,14 +19,14 @@ class OrderService extends BaseService {
   }
 
   // eslint-disable-next-line class-methods-use-this
-  async calculateShippingFee(customerLocation) {
+  async calculateShippingFee(customerLocation, orderTime) {
     const storeLoc = config.hereMap.storeLocation;
 
     // 1. Lấy khoảng cách từ Util
     const distance = await getDistanceInKm(storeLoc, customerLocation);
 
-    // 2. Tính tiền từ Util
-    const shippingFee = calculateShippingFeeByFormula(distance);
+    // 2. Tính tiền từ Util (truyền orderTime vào)
+    const shippingFee = calculateShippingFeeByFormula(distance, orderTime);
 
     return {
       distance: parseFloat(distance.toFixed(2)),
