@@ -15,83 +15,68 @@ const { tokenTypes } = require('../config/tokens');
  * @returns {Promise<User>} Đối tượng User vừa được tạo
  */
 const register = async (subdomain, userBody) => {
-  // 1. Kiểm tra xem email đã được sử dụng chưa
-  // (Giả sử userService.createUser sẽ xử lý việc này,
-  // hoặc chúng ta có thể gọi User.isEmailTaken nếu service không xử lý)
+  // 1. Check email exist (giữ nguyên)
   const isExist = await userService.findOne({ email: userBody.email }, { lean: true });
   if (isExist) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
-  // Tách riêng email và password cho model User
   const { email, password } = userBody;
-
-  // Xác định vai trò dựa trên subdomain
   const isAdmin = subdomain === 'admin';
   const role = isAdmin ? 'admin' : 'customer';
 
-  // 2. Khai báo ngoài try-catch để có thể return
   let newUser;
 
   try {
-    // 3. TẠO USER (cho logic xác thực)
-    // Sử dụng userService.createUser
+    // 2. Tạo User trước
     newUser = await userService.create({
       email,
       password,
       role,
-      isEmailVerified: false, // Mặc định là chưa xác thực
+      isEmailVerified: false,
+      profileType: isAdmin ? 'Employee' : 'Customer', // Định nghĩa type trước
+      // profile: chưa có ID, để null hoặc update sau (do đã bỏ required: true)
     });
 
-    const dataProfile = { ...userBody };
+    // 3. Chuẩn bị data cho Profile
+    // QUAN TRỌNG: Phải gán User ID vào đây
+    const dataProfile = {
+      ...userBody,
+      user: newUser._id,
+    };
+
+    // Chuẩn hóa mảng emails/phones (giữ nguyên logic của bạn)
     if (userBody.email) {
-      dataProfile.emails = [
-        {
-          type: 'Other',
-          value: userBody.email,
-          isPrimary: true,
-        },
-      ];
+      dataProfile.emails = [{ type: 'Other', value: userBody.email, isPrimary: true }];
     }
-
     if (userBody.phone) {
-      dataProfile.phones = [
-        {
-          type: 'Other',
-          value: userBody.phone,
-          isPrimary: true,
-        },
-      ];
+      dataProfile.phones = [{ type: 'Other', value: userBody.phone, isPrimary: true }];
     }
 
-    // 4. TẠO PROFILE (Customer hoặc Employee cho thông tin nghiệp vụ)
+    // 4. Tạo Profile
     try {
+      let profileDoc;
       if (isAdmin) {
-        const employee = await employeeService.create(dataProfile);
-
-        newUser.profileType = 'Employee';
-        newUser.profile = employee._id;
+        // Gọi create của base service (hoặc sửa lại create của EmployeeService để đơn giản hơn)
+        // Lưu ý: dataProfile đã có field 'user', nên Employee sẽ lưu được ref
+        profileDoc = await employeeService.create(dataProfile);
       } else {
-        const customer = await customerService.create(dataProfile);
-
-        newUser.profileType = 'Customer';
-        newUser.profile = customer._id;
+        profileDoc = await customerService.create(dataProfile);
       }
-    } catch (profileError) {
-      // Nếu tạo Profile thất bại, ta phải xóa User đã tạo
-      await userService.deleteHardById(newUser._id);
 
-      // Ném lỗi ban đầu của Profile ra ngoài
+      // 5. Update ngược lại User để link profile
+      newUser.profile = profileDoc._id;
+      await newUser.save(); // Lưu lại user với profile id
+    } catch (profileError) {
+      // Rollback: Xóa user nếu tạo profile lỗi
+      await userService.deleteHardById(newUser._id); // Đảm bảo hàm này tồn tại hoặc dùng User.findByIdAndDelete
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Không thể tạo hồ sơ: ${profileError.message}`);
     }
   } catch (error) {
-    // 7. Bắt lỗi (từ userService.createUser hoặc từ lỗi rollback)
-    if (error instanceof ApiError) {
-      throw error; // Ném lại lỗi đã được xử lý
-    }
+    if (error instanceof ApiError) throw error;
     throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Không thể đăng ký: ${error.message}`);
   }
-  // 8. Trả về user đã tạo
+
   return newUser;
 };
 

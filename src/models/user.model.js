@@ -53,7 +53,6 @@ const userSchema = new Schema(
     },
     profile: {
       type: Schema.Types.ObjectId,
-      required: true,
       refPath: 'profileType', // 🔥 dynamic ref
     },
   },
