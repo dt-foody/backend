@@ -21,13 +21,11 @@ class MenuController {
     if (!promotion) return basePrice;
 
     let salePrice = basePrice;
-    
+
     // Chấp nhận cả 'percentage'
     if (promotion.discountType === 'percentage') {
       salePrice = basePrice * (1 - promotion.discountValue / 100);
-    } 
-    // [FIX] Chấp nhận cả 'fixed' (data cũ) và 'fixed_amount' (schema chuẩn)
-    else if (promotion.discountType === 'fixed_amount' || promotion.discountType === 'fixed') {
+    } else if (promotion.discountType === 'fixed_amount') {
       salePrice = basePrice - promotion.discountValue;
     }
 
@@ -100,7 +98,7 @@ class MenuController {
           productPromoMap.set(pId, promo);
         }
       }
-      
+
       if (promo.combo) {
         const cId = this.getItemId(promo.combo);
         if (cId && !comboPromoMap.has(cId)) {
@@ -140,10 +138,10 @@ class MenuController {
           discountType: promo.discountType,
           discountValue: promo.discountValue,
         };
-        
+
         // Chỉ push vào flash sale nếu thực sự có giảm giá
         if (itemData.salePrice < itemData.basePrice) {
-            flashSaleItems.push(itemData);
+          flashSaleItems.push(itemData);
         }
       }
 
@@ -187,7 +185,7 @@ class MenuController {
           discountValue: promo.discountValue,
         };
         if (comboData.salePrice < comboData.basePrice) {
-             flashSaleItems.push({ ...comboData, type: 'Combo' });
+          flashSaleItems.push({ ...comboData, type: 'Combo' });
         }
       }
 
@@ -198,7 +196,7 @@ class MenuController {
       flashSaleItems.length > 0
         ? {
             id: 'flash-sale',
-            name: 'Flash Sale 🔥',
+            name: 'Flash Sale',
             priority: -999,
             products: flashSaleItems,
           }

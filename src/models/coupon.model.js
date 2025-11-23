@@ -19,7 +19,7 @@ const CouponSchema = new Schema(
 
     // --- Quy tắc giảm giá ---
     value: { type: Number, default: 0 },
-    valueType: { type: String, enum: ['fixed', 'percentage'], default: 'fixed' },
+    valueType: { type: String, enum: ['fixed_amount', 'percentage'], default: 'fixed_amount' },
     maxDiscountAmount: { type: Number, default: 0 },
     minOrderAmount: { type: Number, default: 0 },
 

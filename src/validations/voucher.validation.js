@@ -4,7 +4,7 @@ const { objectId } = require('./custom.validation');
 
 // Sub-schema cho discountSnapshot (dựa trên model)
 const discountSnapshotSchema = Joi.object({
-  type: Joi.string().valid('fixed', 'percentage').required(),
+  type: Joi.string().valid('fixed_amount', 'percentage').required(),
   value: Joi.number().min(0).required(),
   maxDiscount: Joi.number().min(0).default(0),
 }).required();
@@ -70,7 +70,7 @@ const updateById = {
 
       // Không nên cho phép update snapshot, nhưng nếu cần:
       // discountSnapshot: Joi.object({
-      //   type: Joi.string().valid('fixed', 'percentage'),
+      //   type: Joi.string().valid('fixed_amount', 'percentage'),
       //   value: Joi.number().min(0),
       //   maxDiscount: Joi.number().min(0),
       // }),

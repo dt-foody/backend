@@ -16,7 +16,7 @@ const PricePromotionSchema = new Schema(
     product: { type: Schema.Types.ObjectId, ref: 'Product' },
     combo: { type: Schema.Types.ObjectId, ref: 'Combo' },
 
-    // Loại giảm giá: percentage (%) hoặc fixed (tiền cố định)
+    // Loại giảm giá: percentage (%) hoặc fixed_amount (tiền cố định)
     discountType: { type: String, enum: ['percentage', 'fixed_amount'], required: true },
     discountValue: { type: Number, required: true, min: 0 },
 

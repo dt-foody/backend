@@ -6,7 +6,7 @@ const { toJSON, paginate } = require('./plugins');
 
 const DiscountSnapshotSchema = new Schema(
   {
-    type: { type: String, enum: ['fixed', 'percentage'], required: true },
+    type: { type: String, enum: ['fixed_amount', 'percentage'], required: true },
     value: { type: Number, required: true },
     maxDiscount: { type: Number, default: 0 },
   },
