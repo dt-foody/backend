@@ -31,6 +31,7 @@ const envVarsSchema = Joi.object()
     HERE_MAP_API_KEY: Joi.string().description('HERE Map API Key'),
     STORE_LAT: Joi.number().default(21.01932585883329).description('Store Latitude'), // Ví dụ: Chợ Bến Thành
     STORE_LNG: Joi.number().default(105.82209012013686).description('Store Longitude'),
+    BACKEND_URL: Joi.string().description('Backend URL'),
   })
   .unknown();
 
@@ -43,6 +44,7 @@ if (error) {
 module.exports = {
   env: envVars.NODE_ENV,
   port: envVars.PORT,
+  backendUrl: envVars.BACKEND_URL,
   mongoose: {
     url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'test' ? '-test' : ''),
     options: {

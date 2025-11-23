@@ -9,11 +9,28 @@
     "ecmaVersion": 2020
   },
   "rules": {
+    "class-methods-use-this": "off",
     "no-console": "error",
     "func-names": "off",
     "no-underscore-dangle": "off",
     "consistent-return": "off",
     "jest/expect-expect": "off",
-    "security/detect-object-injection": "off"
+    "no-continue": "off",
+    "security/detect-object-injection": "off",
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ForInStatement",
+        "message": "for..in loops iterate over the entire prototype chain. Use Object.{keys,values,entries}."
+      },
+      {
+        "selector": "LabeledStatement",
+        "message": "Labels are a form of GOTO; using them makes code confusing."
+      },
+      {
+        "selector": "WithStatement",
+        "message": "`with` is disallowed in strict mode."
+      }
+    ]
   }
 }

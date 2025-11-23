@@ -1,188 +1,213 @@
+// src/controllers/menu.controller.js
 const httpStatus = require('http-status');
 const { productService, comboService, pricePromotionService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
+const config = require('../config/config');
 
 const { OK } = httpStatus;
-const IMAGE_PREFIX = 'http://localhost:3000';
 
-// ===========================
-// HELPER: TÍNH GIÁ PROMOTION
-// ===========================
-const calculateSalePrice = (basePrice, promotion) => {
-  if (!promotion) return null;
+const IMAGE_PREFIX = config.backendUrl;
 
-  let salePrice;
-  if (promotion.discountType === 'percentage') {
-    const discountAmount = (basePrice * promotion.discountValue) / 100;
-    salePrice = basePrice - discountAmount;
-  } else if (promotion.discountType === 'fixed_amount') {
-    salePrice = basePrice - promotion.discountValue;
-  } else {
-    return null;
-  }
-
-  return Math.max(0, salePrice);
-};
-
-// ===========================
-// HELPER: XÂY CATEGORY + FLASH SALE (TÁCH RIÊNG)
-// ===========================
-const buildMenuCategories = (productResults, productPromoMap) => {
-  const categoryMap = new Map();
-  const flashSaleProducts = [];
-
-  for (const product of productResults) {
-    if (!product.category || !product.category.isActive) continue;
-
-    // --- CREATE CATEGORY OBJECT ---
-    const catId = product.category._id.toString();
-    if (!categoryMap.has(catId)) {
-      categoryMap.set(catId, {
-        id: product.category._id,
-        name: product.category.name,
-        priority: product.category.priority || 0,
-        products: [],
-      });
-    }
-
-    // --- CLEAN PRODUCT OBJECT ---
-    const { category, _id, __v, ...rest } = product.toObject();
-    const productData = {
-      id: _id,
-      ...rest,
-      image: rest.image ? `${IMAGE_PREFIX}${rest.image}` : '',
-    };
-
-    // --- PROMOTION APPLY ---
-    const promotion = productPromoMap.get(productData.id.toString());
-    if (promotion) {
-      productData.promotion = promotion.id || promotion._id;
-      productData.salePrice = calculateSalePrice(productData.basePrice, promotion);
-      flashSaleProducts.push(productData);
-    }
-
-    // --- PUSH INTO CATEGORY ---
-    categoryMap.get(catId).products.push(productData);
-  }
-
-  const regularCategories = Array.from(categoryMap.values()).sort((a, b) => a.priority - b.priority);
-
-  return { regularCategories, flashSaleProducts };
-};
-
-// ===========================
-// CONTROLLER
-// ===========================
 class MenuController {
   constructor() {
     this.getMenu = catchAsync(this.getMenu.bind(this));
   }
 
   /**
-   * @route GET /api/v1/menu
+   * Helper: Tính giá sau giảm
+   * [FIX] Update logic check discountType để khớp với data
    */
+  calculateSalePrice(basePrice, promotion) {
+    if (!promotion) return basePrice;
+
+    let salePrice = basePrice;
+    
+    // Chấp nhận cả 'percentage'
+    if (promotion.discountType === 'percentage') {
+      salePrice = basePrice * (1 - promotion.discountValue / 100);
+    } 
+    // [FIX] Chấp nhận cả 'fixed' (data cũ) và 'fixed_amount' (schema chuẩn)
+    else if (promotion.discountType === 'fixed_amount' || promotion.discountType === 'fixed') {
+      salePrice = basePrice - promotion.discountValue;
+    }
+
+    return Math.max(0, salePrice);
+  }
+
+  isValidPromotion(promo, startOfDay) {
+    // 1. Check Global Limit
+    if (promo.maxQuantity > 0 && promo.usedQuantity >= promo.maxQuantity) return false;
+
+    // 2. Check Daily Limit
+    let currentDailyCount = promo.dailyUsedCount;
+    if (promo.lastUsedDate && promo.lastUsedDate < startOfDay) {
+      currentDailyCount = 0;
+    }
+    if (promo.dailyMaxUses > 0 && currentDailyCount >= promo.dailyMaxUses) return false;
+
+    return true;
+  }
+
+  /**
+   * Helper: Lấy ID an toàn từ field product/combo
+   * [FIX] Hàm mới để xử lý trường hợp populate thất bại hoặc trả về ID raw
+   */
+  getItemId(item) {
+    if (!item) return null;
+    // Nếu là object có _id (đã populate) -> lấy ._id
+    if (item._id) return item._id.toString();
+    // Nếu là object có id (đã toJSON) -> lấy .id
+    if (item.id) return item.id.toString();
+    // Nếu bản thân nó là string/ObjectId -> trả về chính nó
+    return item.toString();
+  }
+
   async getMenu(req, res) {
     const now = new Date();
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-    // Filters
-    const activeQuery = { isActive: true };
-    const activePromoQuery = { isActive: true, endDate: { $gte: now } };
-    const activeComboQuery = { isActive: true, endDate: { $gte: now } };
-
-    // Fetch song song
-    const [promoData, productData, comboData] = await Promise.all([
-      pricePromotionService.findAll(activePromoQuery, {
-        populate: 'product,combo',
-        sortBy: 'priority,createdAt:desc',
-      }),
-      productService.findAll(activeQuery, {
-        populate: 'category',
-        sortBy: 'category.priority,priority',
-      }),
-      comboService.findAll(activeComboQuery, {
-        sortBy: 'priority',
-        populate: 'items.selectableProducts.product',
-      }),
+    const [rawPromotions, products, combos] = await Promise.all([
+      pricePromotionService.findAll(
+        {
+          isActive: true,
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+        },
+        {
+          populate: 'product,combo',
+          sortBy: 'priority:desc,createdAt:desc',
+        }
+      ),
+      productService.findAll({ isActive: true }, { populate: 'category', sortBy: 'category.priority,priority' }),
+      comboService.findAll(
+        { isActive: true, endDate: { $gte: now } },
+        { sortBy: 'priority', populate: 'items.selectableProducts.product' }
+      ),
     ]);
 
-    // Filter flashSales
-    const flashSales = promoData.filter((promo) => promo.product || promo.combo);
-
-    // Build promotion maps
+    // --- BUILD MAP ---
     const productPromoMap = new Map();
     const comboPromoMap = new Map();
 
-    for (const promo of flashSales) {
+    for (const promo of rawPromotions) {
+      if (!this.isValidPromotion(promo, startOfDay)) continue;
+
+      // [FIX] Dùng hàm getItemId để lấy ID chính xác
       if (promo.product) {
-        const productId = promo.product.toString();
-        if (!productPromoMap.has(productId)) {
-          productPromoMap.set(productId, promo.toObject());
+        const pId = this.getItemId(promo.product);
+        if (pId && !productPromoMap.has(pId)) {
+          productPromoMap.set(pId, promo);
         }
       }
+      
       if (promo.combo) {
-        const comboId = promo.combo.toString();
-        if (!comboPromoMap.has(comboId)) {
-          comboPromoMap.set(comboId, promo.toObject());
+        const cId = this.getItemId(promo.combo);
+        if (cId && !comboPromoMap.has(cId)) {
+          comboPromoMap.set(cId, promo);
         }
       }
     }
 
-    // --------------------------
-    // BUILD MENU CATEGORY
-    // --------------------------
-    const { regularCategories, flashSaleProducts } = buildMenuCategories(productData, productPromoMap);
+    // --- BUILD PRODUCTS ---
+    const categoryMap = new Map();
+    const flashSaleItems = [];
 
-    // FLASH SALE CATEGORY TÁCH RIÊNG
+    for (const product of products) {
+      if (!product.category || !product.category.isActive) continue;
+
+      const pObj = product.toObject();
+      const productId = pObj._id.toString();
+
+      const itemData = {
+        id: productId,
+        name: pObj.name,
+        description: pObj.description,
+        image: pObj.image ? `${IMAGE_PREFIX}${pObj.image}` : '',
+        basePrice: pObj.basePrice,
+        salePrice: pObj.basePrice, // Default
+        promotion: null,
+        options: pObj.options || [],
+      };
+
+      // Check Promotion
+      const promo = productPromoMap.get(productId);
+      if (promo) {
+        itemData.salePrice = this.calculateSalePrice(itemData.basePrice, promo);
+        itemData.promotion = {
+          id: promo._id,
+          name: promo.name,
+          discountType: promo.discountType,
+          discountValue: promo.discountValue,
+        };
+        
+        // Chỉ push vào flash sale nếu thực sự có giảm giá
+        if (itemData.salePrice < itemData.basePrice) {
+            flashSaleItems.push(itemData);
+        }
+      }
+
+      const catId = product.category._id.toString();
+      if (!categoryMap.has(catId)) {
+        categoryMap.set(catId, {
+          id: catId,
+          name: product.category.name,
+          priority: product.category.priority || 0,
+          products: [],
+        });
+      }
+      categoryMap.get(catId).products.push(itemData);
+    }
+
+    const regularCategories = Array.from(categoryMap.values()).sort((a, b) => a.priority - b.priority);
+
+    // --- BUILD COMBOS ---
+    const processedCombos = combos.map((combo) => {
+      const cObj = combo.toObject();
+      const comboId = cObj._id.toString();
+
+      const comboData = {
+        id: comboId,
+        name: cObj.name,
+        description: cObj.description,
+        image: cObj.image ? `${IMAGE_PREFIX}${cObj.image}` : '',
+        basePrice: cObj.comboPrice,
+        salePrice: cObj.comboPrice,
+        promotion: null,
+        items: cObj.items || [],
+      };
+
+      const promo = comboPromoMap.get(comboId);
+      if (promo) {
+        comboData.salePrice = this.calculateSalePrice(comboData.basePrice, promo);
+        comboData.promotion = {
+          id: promo._id,
+          name: promo.name,
+          discountType: promo.discountType,
+          discountValue: promo.discountValue,
+        };
+        if (comboData.salePrice < comboData.basePrice) {
+             flashSaleItems.push({ ...comboData, type: 'Combo' });
+        }
+      }
+
+      return comboData;
+    });
+
     const flashSaleCategory =
-      flashSaleProducts.length > 0
+      flashSaleItems.length > 0
         ? {
-            id: 'flash_sale_category',
-            name: 'Flash Sale',
+            id: 'flash-sale',
+            name: 'Flash Sale 🔥',
             priority: -999,
-            products: flashSaleProducts,
+            products: flashSaleItems,
           }
         : null;
 
-    // --------------------------
-    // BUILD COMBOS
-    // --------------------------
-    const combos = comboData.map((combo) => {
-      const { _id, __v, ...rest } = combo.toObject();
-      const comboObj = {
-        id: _id,
-        ...rest,
-        image: rest.image ? `${IMAGE_PREFIX}${rest.image}` : '',
-      };
-
-      const promotion = comboPromoMap.get(comboObj.id.toString());
-      if (promotion) {
-        comboObj.promotion = promotion;
-        comboObj.salePrice = calculateSalePrice(comboObj.comboPrice, promotion);
-      }
-
-      if (comboObj.items && comboObj.items.length) {
-        comboObj.items.forEach((slot) => {
-          if (slot.selectableProducts) {
-            slot.selectableProducts.forEach((p) => {
-              if (p.product) {
-                p.product.id = p.product.id || p.product._id;
-              }
-            });
-          }
-        });
-      }
-
-      return comboObj;
-    });
-
-    // --------------------------
-    // RESPONSE
-    // --------------------------
     res.status(OK).json({
-      flashSales, // danh sách khuyến mãi raw
-      flashSaleCategory, // FLASH SALE CATEGORY (riêng)
-      thucDon: regularCategories, // MENU CATEGORY BÌNH THƯỜNG
-      combos, // combo
+      flashSaleCategory,
+      thucDon: regularCategories,
+      combos: processedCombos,
     });
   }
 }

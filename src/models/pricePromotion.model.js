@@ -36,6 +36,9 @@ const PricePromotionSchema = new Schema(
     // Số lần đã dùng trong ngày hiện tại
     dailyUsedCount: { type: Number, default: 0 },
 
+    // Thêm trường giới hạn trên mỗi User
+    maxQuantityPerCustomer: { type: Number, default: 0 }, // 0 là không giới hạn
+
     // Trạng thái
     isActive: { type: Boolean, default: true },
 

@@ -54,7 +54,7 @@ If you did not request any password resets, then ignore this email.`;
  */
 const sendVerificationEmail = async (to, token) => {
   const subject = 'Verify Your Email Address — MyCompany';
-  const verificationEmailUrl = `http://localhost:3001/en/verify-email?token=${token}`;
+  const verificationEmailUrl = `https://luuchi.vercel.app/en/verify-email?token=${token}`;
   const userName = to;
   const userEmail = to;
 

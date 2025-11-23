@@ -82,11 +82,18 @@ const shippingSchema = Joi.object({
     label: Joi.string().allow('', null),
     recipientName: Joi.string().required(),
     recipientPhone: Joi.string().required(),
+    fullAddress: Joi.string().allow('', null),
     street: Joi.string().required(),
     ward: Joi.string().required(),
     district: Joi.string().required(),
     city: Joi.string().required(),
   }).required(),
+  location: Joi.object()
+    .keys({
+      lat: Joi.number(),
+      lng: Joi.number(),
+    })
+    .optional(),
   status: Joi.string().valid('pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled').default('pending'),
 });
 

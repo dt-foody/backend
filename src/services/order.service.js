@@ -12,7 +12,7 @@ class OrderService extends BaseService {
     this.payos = getPayOS();
 
     // Bind methods
-    this.createOrder = this.createOrder.bind(this);
+    this.customerOrder = this.customerOrder.bind(this);
     this.adminPanelCreateOrder = this.adminPanelCreateOrder.bind(this);
     this.adminPanelUpdateOrder = this.adminPanelUpdateOrder.bind(this);
     this.calculateShippingFee = this.calculateShippingFee.bind(this);
@@ -278,7 +278,7 @@ class OrderService extends BaseService {
    * 4. CREATE ORDER (FE user)
    *    -> dùng giá từ DB (snapshot tại thời điểm tạo)
    * ============================================================ */
-  async createOrder(payload) {
+  async customerOrder(payload) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
     const order = await this.model.create(orderData);
 

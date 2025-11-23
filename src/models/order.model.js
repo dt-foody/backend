@@ -48,6 +48,8 @@ const OrderItemSchema = new Schema(
     options: [OrderItemOptionSchema],
     comboSelections: [OrderItemComboSelectionSchema],
 
+    promotion: { type: Schema.Types.ObjectId, ref: 'PricePromotion', default: null },
+
     note: { type: String, default: '' },
   },
   { _id: false }
