@@ -9,9 +9,9 @@ async function getEffectivePermissions(user) {
   //   const systemPerms = roleRights.get(user.role) || [];
   //   systemPerms.forEach(p => permissions.add(p));
 
-  // 2️⃣. Lấy quyền từ các role custom (populate rolesCustom → permissions)
-  if (user.rolesCustom && user.rolesCustom.length) {
-    const customRoles = await Role.find({ _id: { $in: user.rolesCustom } }).populate('permissions');
+  // 2️⃣. Lấy quyền từ các role custom (populate roles → permissions)
+  if (user.roles && user.roles.length) {
+    const customRoles = await Role.find({ _id: { $in: user.roles } }).populate('permissions');
     customRoles.forEach((role) => {
       role.permissions.forEach((p) => permissions.add(p.name));
     });

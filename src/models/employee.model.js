@@ -45,7 +45,7 @@ const EmployeeSchema = new Schema(
         _id: false,
         type: {
           type: String,
-          enum: ['Home', 'Company', 'Other'],
+          enum: ['Mobile', 'Work', 'Home', 'Fax', 'Other'],
           default: 'Other',
         },
         value: {
@@ -57,10 +57,9 @@ const EmployeeSchema = new Schema(
       },
     ],
 
-    // --- ĐỊA CHỈ GIAO HÀNG ---
+    // --- ĐỊA CHỈ ---
     addresses: [
       {
-        _id: false,
         label: { type: String },
         recipientName: { type: String, required: true },
         recipientPhone: { type: String, required: true },
@@ -76,9 +75,6 @@ const EmployeeSchema = new Schema(
         isDefault: { type: Boolean, default: false },
       },
     ],
-
-    // --- METADATA ---
-    isActive: { type: Boolean, default: true },
 
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isDeleted: { type: Boolean, default: false },

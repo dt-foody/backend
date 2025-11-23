@@ -2,7 +2,6 @@ const httpStatus = require('http-status');
 const BaseController = require('../utils/_base.controller');
 const { customerService, employeeService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
-const ApiError = require('../utils/ApiError');
 
 const { OK } = httpStatus;
 

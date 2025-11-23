@@ -22,10 +22,9 @@ const userSchema = new Schema(
     },
     phone: {
       type: String,
-      required: true,
-      unique: true,
+      // required: true,
+      // unique: true,
       trim: true,
-      lowercase: true,
     },
     password: {
       type: String,
@@ -39,10 +38,10 @@ const userSchema = new Schema(
       enum: roles,
       default: 'customer',
     },
-    rolesCustom: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
+    roles: [{ type: Schema.Types.ObjectId, ref: 'Role' }],
     extraPermissions: [{ type: Schema.Types.ObjectId, ref: 'Permission' }],
     excludePermissions: [{ type: Schema.Types.ObjectId, ref: 'Permission' }],
-
+    isActive: { type: Boolean, default: true },
     isEmailVerified: {
       type: Boolean,
       default: false,

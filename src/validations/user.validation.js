@@ -14,11 +14,12 @@ const create = {
 
     role: Joi.string().required().valid('guest', 'staff', 'admin'),
 
-    rolesCustom: Joi.array().items(roleRef),
+    roles: Joi.array().items(roleRef),
     extraPermissions: Joi.array().items(permissionRef),
     excludePermissions: Joi.array().items(permissionRef),
 
     isEmailVerified: Joi.boolean().default(false),
+    isActive: Joi.boolean().default(true),
   }),
 };
 
@@ -54,11 +55,12 @@ const updateById = {
       password: Joi.string().custom(password),
       role: Joi.string().valid('guest', 'staff', 'admin'),
 
-      rolesCustom: Joi.array().items(roleRef),
+      roles: Joi.array().items(roleRef),
       extraPermissions: Joi.array().items(permissionRef),
       excludePermissions: Joi.array().items(permissionRef),
 
       isEmailVerified: Joi.boolean(),
+      isActive: Joi.boolean(),
     })
     .min(1),
 };

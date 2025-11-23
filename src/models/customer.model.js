@@ -62,7 +62,6 @@ const CustomerSchema = new Schema(
     // --- ĐỊA CHỈ GIAO HÀNG ---
     addresses: [
       {
-        _id: false,
         label: { type: String },
         recipientName: { type: String, required: true },
         recipientPhone: { type: String, required: true },
@@ -79,8 +78,6 @@ const CustomerSchema = new Schema(
       },
     ],
 
-    // --- METADATA ---
-    isActive: { type: Boolean, default: true },
     // isNew: {type: Boolean, default: true },
     lastOrderDate: { type: Date },
 

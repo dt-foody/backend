@@ -3,6 +3,7 @@ const { objectId } = require('./custom.validation');
 
 // --- Sub-schema cho address ---
 const addressSchema = Joi.object({
+  _id: Joi.string().allow('', null),
   label: Joi.string().allow('', null),
   recipientName: Joi.string().required().trim(),
   recipientPhone: Joi.string().required().trim(),
@@ -44,7 +45,6 @@ const create = {
     phones: Joi.array().items(phoneSchema),
 
     addresses: Joi.array().items(addressSchema).optional(),
-    isActive: Joi.boolean().default(true),
   }),
 };
 
@@ -82,7 +82,6 @@ const updateById = {
     emails: Joi.array().items(emailSchema),
     phones: Joi.array().items(phoneSchema),
     addresses: Joi.array().items(addressSchema),
-    isActive: Joi.boolean(),
   }).min(1),
 };
 

@@ -16,6 +16,7 @@ const PERMISSIONS = {
   combo: ['create', 'update', 'delete', 'read'],
   order: ['create', 'update', 'delete', 'read'],
   user: ['create', 'update', 'delete', 'read'],
+  employee: ['create', 'update', 'delete', 'read'],
   role: ['create', 'update', 'delete', 'read'],
   customer: ['create', 'update', 'delete', 'read'],
   coupon: ['create', 'update', 'delete', 'read'],
