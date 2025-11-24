@@ -79,6 +79,8 @@ const appliedCouponSchema = Joi.object({
 
 const shippingSchema = Joi.object({
   address: Joi.object({
+    _id: Joi.string().allow(null, ''),
+    isDefault: Joi.boolean().default(true),
     label: Joi.string().allow('', null),
     recipientName: Joi.string().required(),
     recipientPhone: Joi.string().required(),
@@ -87,13 +89,11 @@ const shippingSchema = Joi.object({
     ward: Joi.string().required(),
     district: Joi.string().required(),
     city: Joi.string().required(),
+    location: Joi.object({
+      type: Joi.string().valid('Point').default('Point'),
+      coordinates: Joi.array(), // .items(Joi.number()).length(2), // [lng, lat]
+    }).optional(),
   }).required(),
-  location: Joi.object()
-    .keys({
-      lat: Joi.number(),
-      lng: Joi.number(),
-    })
-    .optional(),
   status: Joi.string().valid('pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled').default('pending'),
 });
 

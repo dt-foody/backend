@@ -116,6 +116,10 @@ const OrderSchema = new Schema(
             ward: String,
             district: String,
             city: String,
+            location: {
+              type: { type: String, enum: ['Point'], default: 'Point' },
+              coordinates: { type: [Number] },
+            },
           },
           status: {
             type: String,
