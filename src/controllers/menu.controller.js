@@ -5,7 +5,6 @@ const catchAsync = require('../utils/catchAsync');
 const config = require('../config/config');
 
 const { OK } = httpStatus;
-
 const IMAGE_PREFIX = config.backendUrl;
 
 class MenuController {
@@ -14,50 +13,57 @@ class MenuController {
   }
 
   /**
-   * Helper: Tính giá sau giảm
-   * [FIX] Update logic check discountType để khớp với data
-   */
-  calculateSalePrice(basePrice, promotion) {
-    if (!promotion) return basePrice;
-
-    let salePrice = basePrice;
-
-    // Chấp nhận cả 'percentage'
-    if (promotion.discountType === 'percentage') {
-      salePrice = basePrice * (1 - promotion.discountValue / 100);
-    } else if (promotion.discountType === 'fixed_amount') {
-      salePrice = basePrice - promotion.discountValue;
-    }
-
-    return Math.max(0, salePrice);
-  }
-
-  isValidPromotion(promo, startOfDay) {
-    // 1. Check Global Limit
-    if (promo.maxQuantity > 0 && promo.usedQuantity >= promo.maxQuantity) return false;
-
-    // 2. Check Daily Limit
-    let currentDailyCount = promo.dailyUsedCount;
-    if (promo.lastUsedDate && promo.lastUsedDate < startOfDay) {
-      currentDailyCount = 0;
-    }
-    if (promo.dailyMaxUses > 0 && currentDailyCount >= promo.dailyMaxUses) return false;
-
-    return true;
-  }
-
-  /**
-   * Helper: Lấy ID an toàn từ field product/combo
-   * [FIX] Hàm mới để xử lý trường hợp populate thất bại hoặc trả về ID raw
+   * Helper: Extract safe string ID from Populated Object or Raw ID
    */
   getItemId(item) {
     if (!item) return null;
-    // Nếu là object có _id (đã populate) -> lấy ._id
-    if (item._id) return item._id.toString();
-    // Nếu là object có id (đã toJSON) -> lấy .id
-    if (item.id) return item.id.toString();
-    // Nếu bản thân nó là string/ObjectId -> trả về chính nó
+    if (typeof item === 'object') {
+      // Prioritize 'id' (virtual/plugin), fallback to '_id'
+      return item.id || item._id?.toString();
+    }
     return item.toString();
+  }
+
+  /**
+   * Helper: Calculate final price based on discount type
+   */
+  calculateSalePrice(basePrice, promotion) {
+    console.log("promotion", basePrice, promotion);
+    if (!promotion) return basePrice;
+
+    let salePrice = basePrice;
+    const { discountType, discountValue } = promotion;
+
+    if (discountType === 'percentage') {
+      salePrice = basePrice * (1 - discountValue / 100);
+    } else if (discountType === 'fixed_amount') {
+      salePrice = basePrice - discountValue;
+    }
+    console.log("salePrice", salePrice);
+
+    return Math.max(0, Math.round(salePrice));
+  }
+
+  /**
+   * Helper: Validate promotion limits
+   */
+  isValidPromotion(promo, startOfDay) {
+    // 1. Global Limit
+    if (promo.maxQuantity > 0 && promo.usedQuantity >= promo.maxQuantity) {
+      return false;
+    }
+
+    // 2. Daily Limit
+    let currentDailyCount = promo.dailyUsedCount || 0;
+    if (promo.lastUsedDate && new Date(promo.lastUsedDate) < startOfDay) {
+      currentDailyCount = 0;
+    }
+
+    if (promo.dailyMaxUses > 0 && currentDailyCount >= promo.dailyMaxUses) {
+      return false;
+    }
+
+    return true;
   }
 
   async getMenu(req, res) {
@@ -65,6 +71,7 @@ class MenuController {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
+    // 1. Fetch Data in Parallel
     const [rawPromotions, products, combos] = await Promise.all([
       pricePromotionService.findAll(
         {
@@ -84,68 +91,66 @@ class MenuController {
       ),
     ]);
 
-    // --- BUILD MAP ---
+    // 2. Build Promotion Maps
     const productPromoMap = new Map();
     const comboPromoMap = new Map();
+
+    console.log("rawPromotions", rawPromotions);
 
     for (const promo of rawPromotions) {
       if (!this.isValidPromotion(promo, startOfDay)) continue;
 
-      // [FIX] Dùng hàm getItemId để lấy ID chính xác
-      if (promo.product) {
-        const pId = this.getItemId(promo.product);
-        if (pId && !productPromoMap.has(pId)) {
-          productPromoMap.set(pId, promo);
-        }
+      // Map for Product
+      const pId = promo.product && promo.product.toString();
+      if (pId && !productPromoMap.has(pId)) {
+        productPromoMap.set(pId, promo);
       }
 
-      if (promo.combo) {
-        const cId = this.getItemId(promo.combo);
-        if (cId && !comboPromoMap.has(cId)) {
-          comboPromoMap.set(cId, promo);
-        }
+      // Map for Combo
+      const cId = promo.combo && promo.combo.toString();
+      if (cId && !comboPromoMap.has(cId)) {
+        comboPromoMap.set(cId, promo);
       }
     }
 
-    // --- BUILD PRODUCTS ---
+    console.log("comboPromoMap", comboPromoMap);
+
+    // 3. Process Products & Categories
     const categoryMap = new Map();
     const flashSaleItems = [];
 
     for (const product of products) {
       if (!product.category || !product.category.isActive) continue;
 
-      const pObj = product.toObject();
-      const productId = pObj._id.toString();
+      const pObj = product.toObject(); // Plugin ensures pObj.id exists
+      const productId = pObj.id.toString();
 
+      // Prepare Base Item Data
       const itemData = {
-        id: productId,
-        name: pObj.name,
-        description: pObj.description,
+        ...pObj,
         image: pObj.image ? `${IMAGE_PREFIX}${pObj.image}` : '',
-        basePrice: pObj.basePrice,
-        salePrice: pObj.basePrice, // Default
+        salePrice: pObj.basePrice,
         promotion: null,
-        options: pObj.options || [],
       };
 
-      // Check Promotion
+      // Apply Promotion
       const promo = productPromoMap.get(productId);
       if (promo) {
         itemData.salePrice = this.calculateSalePrice(itemData.basePrice, promo);
         itemData.promotion = {
-          id: promo._id,
+          id: this.getItemId(promo).toString(), // Ensure ID string
           name: promo.name,
           discountType: promo.discountType,
           discountValue: promo.discountValue,
         };
 
-        // Chỉ push vào flash sale nếu thực sự có giảm giá
         if (itemData.salePrice < itemData.basePrice) {
-          flashSaleItems.push(itemData);
+          flashSaleItems.push({ ...itemData, type: 'Product' });
         }
       }
 
-      const catId = product.category._id.toString();
+      // Group by Category
+      const catId = this.getItemId(product.category);
       if (!categoryMap.has(catId)) {
         categoryMap.set(catId, {
           id: catId,
@@ -159,15 +164,13 @@ class MenuController {
 
     const regularCategories = Array.from(categoryMap.values()).sort((a, b) => a.priority - b.priority);
 
-    // --- BUILD COMBOS ---
+    // 4. Process Combos
     const processedCombos = combos.map((combo) => {
-      const cObj = combo.toObject();
-      const comboId = cObj._id.toString();
+      const cObj = combo.toObject(); // Plugin ensures cObj.id exists
+      const comboId = cObj.id.toString();
 
       const comboData = {
-        id: comboId,
-        name: cObj.name,
-        description: cObj.description,
+        ...cObj,
         image: cObj.image ? `${IMAGE_PREFIX}${cObj.image}` : '',
         basePrice: cObj.comboPrice,
         salePrice: cObj.comboPrice,
@@ -175,15 +178,17 @@ class MenuController {
         items: cObj.items || [],
       };
 
+      // Apply Promotion
       const promo = comboPromoMap.get(comboId);
       if (promo) {
-        comboData.salePrice = this.calculateSalePrice(comboData.basePrice, promo);
+        comboData.salePrice = this.calculateSalePrice(comboData.comboPrice, promo);
         comboData.promotion = {
-          id: promo._id,
+          id: this.getItemId(promo),
           name: promo.name,
           discountType: promo.discountType,
           discountValue: promo.discountValue,
         };
+
         if (comboData.salePrice < comboData.basePrice) {
           flashSaleItems.push({ ...comboData, type: 'Combo' });
         }
@@ -192,6 +197,7 @@ class MenuController {
       return comboData;
     });
 
+    // 5. Construct Final Response
     const flashSaleCategory =
       flashSaleItems.length > 0
         ? {
