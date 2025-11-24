@@ -28,7 +28,6 @@ class MenuController {
    * Helper: Calculate final price based on discount type
    */
   calculateSalePrice(basePrice, promotion) {
-    console.log("promotion", basePrice, promotion);
     if (!promotion) return basePrice;
 
     let salePrice = basePrice;
@@ -39,7 +38,6 @@ class MenuController {
     } else if (discountType === 'fixed_amount') {
       salePrice = basePrice - discountValue;
     }
-    console.log("salePrice", salePrice);
 
     return Math.max(0, Math.round(salePrice));
   }
@@ -95,8 +93,6 @@ class MenuController {
     const productPromoMap = new Map();
     const comboPromoMap = new Map();
 
-    console.log("rawPromotions", rawPromotions);
-
     for (const promo of rawPromotions) {
       if (!this.isValidPromotion(promo, startOfDay)) continue;
 
@@ -112,8 +108,6 @@ class MenuController {
         comboPromoMap.set(cId, promo);
       }
     }
-
-    console.log("comboPromoMap", comboPromoMap);
 
     // 3. Process Products & Categories
     const categoryMap = new Map();
