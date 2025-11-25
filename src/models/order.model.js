@@ -36,23 +36,76 @@ const OrderItemComboSelectionSchema = new Schema(
  * ============================================================ */
 const OrderItemSchema = new Schema(
   {
-    item: { type: Schema.Types.ObjectId, refPath: 'itemType', required: true },
-    itemType: { type: String, enum: ['Product', 'Combo'], required: true },
+    // --- 1. ĐỊNH DANH SẢN PHẨM ---
+    item: {
+      type: Schema.Types.ObjectId,
+      required: true,
+      refPath: 'itemType', // Dynamic Reference: trỏ tới Product hoặc Combo tuỳ value của itemType
+    },
+    itemType: {
+      type: String,
+      required: true,
+      enum: ['Product', 'Combo'],
+    },
+    name: {
+      type: String,
+      required: true,
+    }, // Snapshot tên SP (phòng trường hợp sau này đổi tên món, lịch sử đơn vẫn đúng)
 
-    name: { type: String, required: true },
-    quantity: { type: Number, required: true, min: 1 },
+    // --- 2. SỐ LƯỢNG ---
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
 
-    basePrice: { type: Number, required: true, min: 0 },
-    price: { type: Number, required: true, min: 0 },
+    // --- 3. SNAPSHOT GIÁ (QUAN TRỌNG) ---
+    /* Lý do cần 3 trường giá:
+       1. originalBasePrice: Để so sánh hiệu quả giảm giá (Market Price).
+       2. basePrice: Để tính doanh thu thuần từ sản phẩm (Selling Price).
+       3. price: Để tính tổng bill khách phải trả (Final Price).
+    */
 
-    options: [OrderItemOptionSchema],
-    comboSelections: [OrderItemComboSelectionSchema],
+    // A. Giá niêm yết trên Menu gốc tại thời điểm đặt
+    // Ví dụ: Trà sữa (40k) -> Lưu 40000
+    originalBasePrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
 
-    promotion: { type: Schema.Types.ObjectId, ref: 'PricePromotion', default: null },
+    // B. Giá gốc thực tế sau khi áp dụng Promotion (chưa cộng topping)
+    // Ví dụ: Đang sale 20% (32k) -> Lưu 32000. Nếu không sale -> Lưu 40000
+    basePrice: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
 
+    // C. Đơn giá cuối cùng của 1 item (Đã bao gồm Base Price thực tế + Toppings)
+    // Ví dụ: Base (32k) + Trân châu (5k) + Pudding (7k) -> Lưu 44000
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    // --- 4. TÙY CHỌN KÈM THEO ---
+    options: [OrderItemOptionSchema], // (Cần import schema option của bạn vào đây)
+    comboSelections: [OrderItemComboSelectionSchema], // (Cần import schema combo selection vào đây)
+
+    // --- 5. TRACKING KHUYẾN MÃI ---
+    // Lưu ID chương trình KM đã áp dụng để truy vết, báo cáo doanh thu chiến dịch
+    promotion: {
+      type: Schema.Types.ObjectId,
+      ref: 'PricePromotion',
+      default: null,
+    },
+
+    // --- 6. GHI CHÚ KHÁCH HÀNG ---
     note: { type: String, default: '' },
   },
-  { _id: false }
+  { _id: false } // Tắt tự động tạo _id cho sub-doc để gọn data
 );
 
 /* ============================================================

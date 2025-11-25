@@ -1,5 +1,5 @@
 const BaseService = require('../utils/_base.service');
-const { Order, Product, Combo, Coupon } = require('../models');
+const { Order, Product, Combo, Coupon, PricePromotion } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 
@@ -54,6 +54,45 @@ class OrderService extends BaseService {
    * 1A. Build items từ DB (dùng cho CREATE -> snapshot theo menu hiện tại)
    * ============================================================ */
   static async buildOrderItemsFromMenu(items) {
+    const now = new Date();
+
+    const findActivePromotion = async (itemId, type = 'product') => {
+      const query = {
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        isDeleted: false,
+      };
+
+      // Gắn điều kiện theo loại (Product hoặc Combo)
+      if (type === 'product') query.product = itemId;
+      if (type === 'combo') query.combo = itemId;
+
+      // Tìm promotion có độ ưu tiên cao nhất (priority giảm dần)
+      const promotion = await PricePromotion.findOne(query).sort({ priority: -1 });
+
+      if (!promotion) return null;
+
+      // Check logic số lượng tổng (Global limit)
+      // Nếu maxQuantity > 0 thì mới check, = 0 là không giới hạn
+      if (promotion.maxQuantity > 0 && promotion.usedQuantity >= promotion.maxQuantity) {
+        return null;
+      }
+
+      // Check logic số lượng theo ngày (Daily limit)
+      if (promotion.dailyMaxUses > 0) {
+        const isSameDay = promotion.lastUsedDate && new Date(promotion.lastUsedDate).toDateString() === now.toDateString();
+
+        // Nếu cùng ngày và đã hết lượt -> tạch
+        if (isSameDay && promotion.dailyUsedCount >= promotion.dailyMaxUses) {
+          return null;
+        }
+        // Nếu qua ngày mới -> reset logic (tạm coi là valid, việc reset count sẽ làm ở bước thanh toán)
+      }
+
+      return promotion;
+    };
+
     return Promise.all(
       items.map(async (cartItem) => {
         let finalPrice = 0;
@@ -63,20 +102,47 @@ class OrderService extends BaseService {
           const product = await Product.findById(cartItem.item.id);
           if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
 
+          // 1. TÌM PROMOTION
+          const activePromo = await findActivePromotion(product._id, 'product');
+
+          // 2. TÍNH GIÁ BASE (Có giảm giá hay không)
+          let itemBasePrice = product.basePrice;
+          let appliedPromotionId = null;
+
+          if (activePromo) {
+            let discountAmount = 0;
+            if (activePromo.discountType === 'percentage') {
+              discountAmount = (product.basePrice * activePromo.discountValue) / 100;
+            } else if (activePromo.discountType === 'fixed_amount') {
+              discountAmount = activePromo.discountValue;
+            }
+
+            // Giá không được âm
+            itemBasePrice = Math.max(0, product.basePrice - discountAmount);
+            appliedPromotionId = activePromo._id;
+          }
+
+          // 3. TÍNH GIÁ OPTIONS
           const normalizedOptions = OrderService.normalizeOptions(cartItem.options);
           const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
-          finalPrice = product.basePrice + optionsPrice;
+
+          // 4. TỔNG TIỀN
+          finalPrice = itemBasePrice + optionsPrice;
 
           return {
             item: product._id,
             itemType: 'Product',
             name: product.name,
             quantity: cartItem.quantity,
-            basePrice: product.basePrice,
-            price: finalPrice,
+
+            originalBasePrice: product.basePrice, // Giá gốc trên menu (40k)
+            basePrice: itemBasePrice, // Giá thực tế bán (32k)
+            price: finalPrice, // Tổng tiền 1 item (44k)
+
             options: normalizedOptions,
             comboSelections: [],
             note: cartItem.note || '',
+            promotion: appliedPromotionId, // Lưu ID để tracking usage sau này
           };
         }
 
