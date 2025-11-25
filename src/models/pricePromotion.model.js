@@ -20,6 +20,9 @@ const PricePromotionSchema = new Schema(
     discountType: { type: String, enum: ['percentage', 'fixed_amount'], required: true },
     discountValue: { type: Number, required: true, min: 0 },
 
+    // Giá trị giảm giá tối đa
+    maxDiscountAmount: { type: Number, default: 0 },
+
     // Thời gian hiệu lực
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
