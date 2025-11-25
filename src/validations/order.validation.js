@@ -36,6 +36,7 @@ const createOrderItemSchema = Joi.object({
     name: Joi.string().required(),
     basePrice: Joi.number().min(0),
     comboPrice: Joi.number().min(0),
+    salePrice: Joi.number().min(0),
   })
     .required()
     .unknown(true),
