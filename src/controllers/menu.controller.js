@@ -31,10 +31,21 @@ class MenuController {
     if (!promotion) return basePrice;
 
     let salePrice = basePrice;
-    const { discountType, discountValue } = promotion;
+    const { discountType, discountValue, maxDiscountAmount } = promotion;
 
     if (discountType === 'percentage') {
-      salePrice = basePrice * (1 - discountValue / 100);
+      // 1. Tính số tiền được giảm theo phần trăm
+      let discountAmount = basePrice * (discountValue / 100);
+
+      // 2. Nếu có cấu hình giảm tối đa (maxDiscountAmount > 0) thì kiểm tra trần
+      if (maxDiscountAmount && maxDiscountAmount > 0) {
+        if (discountAmount > maxDiscountAmount) {
+          discountAmount = maxDiscountAmount;
+        }
+      }
+
+      // 3. Trừ tiền giảm vào giá gốc
+      salePrice = basePrice - discountAmount;
     } else if (discountType === 'fixed_amount') {
       salePrice = basePrice - discountValue;
     }
@@ -136,6 +147,7 @@ class MenuController {
           name: promo.name,
           discountType: promo.discountType,
           discountValue: promo.discountValue,
+          maxDiscountAmount: promo.maxDiscountAmount || 0,
         };
 
         if (itemData.salePrice < itemData.basePrice) {
