@@ -1,10 +1,4 @@
 /* eslint-disable no-param-reassign */
-
-/**
- * A mongoose schema plugin which applies the following in the toJSON transform call:
- *  - removes __v, createdAt, updatedAt, and any path that has private: true
- *  - replaces _id with id
- */
 const he = require('he');
 
 const deleteAtPath = (obj, path, index) => {
@@ -21,28 +15,41 @@ const toJSON = (schema) => {
     transform = schema.options.toJSON.transform;
   }
 
-  schema.options.toJSON = Object.assign(schema.options.toJSON || {}, {
-    transform(doc, ret, options) {
-      Object.keys(schema.paths).forEach((path) => {
-        if (schema.paths[path].options && schema.paths[path].options.private) {
-          deleteAtPath(ret, path.split('.'), 0);
-        }
-      });
+  // Logic transform dùng chung cho cả toJSON và toObject
+  const transformer = (doc, ret, options) => {
+    Object.keys(schema.paths).forEach((path) => {
+      if (schema.paths[path].options && schema.paths[path].options.private) {
+        deleteAtPath(ret, path.split('.'), 0);
+      }
+    });
 
-      ret.id = ret._id.toString();
+    // Quan trọng: Chuyển _id -> id
+    if (ret._id) {
+      ret.id = ret._id;
       delete ret._id;
-      delete ret.__v;
-      // delete ret.createdAt;
-      // delete ret.updatedAt;
+    }
 
-      if (ret.content) {
-        ret.content = he.decode(ret.content);
-      }
+    delete ret.__v;
+    // delete ret.createdAt;
+    // delete ret.updatedAt;
 
-      if (transform) {
-        return transform(doc, ret, options);
-      }
-    },
+    if (ret.content) {
+      ret.content = he.decode(ret.content);
+    }
+
+    if (transform) {
+      return transform(doc, ret, options);
+    }
+  };
+
+  // Áp dụng cho cả 2
+  schema.options.toJSON = Object.assign(schema.options.toJSON || {}, {
+    transform: transformer,
+  });
+
+  // THÊM DÒNG NÀY: Để khi gọi .toObject() trong code logic cũng tự động có id
+  schema.options.toObject = Object.assign(schema.options.toObject || {}, {
+    transform: transformer,
   });
 };
 
