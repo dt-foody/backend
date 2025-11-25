@@ -2,6 +2,7 @@ const BaseService = require('../utils/_base.service');
 const { Order, Product, Combo, Coupon, PricePromotion } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
+const logger = require('../config/logger');
 
 const { getDistanceInKm } = require('../utils/map.util'); // Import util bản đồ
 const { calculateShippingFeeByFormula } = require('../utils/shipping.util'); // Import util tính tiền
@@ -341,12 +342,73 @@ class OrderService extends BaseService {
   }
 
   /* ============================================================
+   * Helper: Cập nhật thống kê Promotion sau khi tạo đơn
+   * (Dùng Pipeline Update để xử lý logic reset ngày tự động)
+   * ============================================================ */
+  static async updatePromotionUsage(orderItems) {
+    const now = new Date();
+
+    // Lọc ra các item có áp dụng promotion
+    const promoItems = orderItems.filter((item) => item.promotion);
+
+    if (promoItems.length === 0) return;
+
+    // Duyệt và update từng promotion (Dùng Promise.all để chạy song song cho nhanh)
+    await Promise.all(
+      promoItems.map(async (item) => {
+        // Logic:
+        // 1. Tăng usedQuantity (tổng)
+        // 2. Kiểm tra lastUsedDate:
+        //    - Nếu CÙNG ngày hiện tại: dailyUsedCount = dailyUsedCount + quantity
+        //    - Nếu KHÁC ngày (qua ngày mới): dailyUsedCount = quantity (reset và gán bằng số lượng mua)
+        // 3. Cập nhật lastUsedDate = now
+
+        return PricePromotion.updateOne({ _id: item.promotion }, [
+          {
+            $set: {
+              // Tăng tổng số lượng đã dùng
+              usedQuantity: { $add: ['$usedQuantity', item.quantity] },
+
+              // Logic reset theo ngày
+              dailyUsedCount: {
+                $cond: {
+                  if: {
+                    // So sánh ngày trong DB với ngày hiện tại (YYYY-MM-DD)
+                    $eq: [
+                      { $dateToString: { format: '%Y-%m-%d', date: '$lastUsedDate' } },
+                      { $dateToString: { format: '%Y-%m-%d', date: now } },
+                    ],
+                  },
+                  then: { $add: ['$dailyUsedCount', item.quantity] }, // Cùng ngày -> cộng dồn
+                  else: item.quantity, // Khác ngày -> reset về số lượng mua hiện tại
+                },
+              },
+
+              // Cập nhật ngày dùng cuối
+              lastUsedDate: now,
+            },
+          },
+        ]);
+      })
+    );
+  }
+
+  /* ============================================================
    * 4. CREATE ORDER (FE user)
    *    -> dùng giá từ DB (snapshot tại thời điểm tạo)
    * ============================================================ */
   async customerOrder(payload) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
     const order = await this.model.create(orderData);
+
+    // 3. [QUAN TRỌNG] Cập nhật số lượng Promotion đã dùng
+    // Nên để trong block try-catch hoặc chạy background để không chặn response nếu không quá quan trọng
+    try {
+      await OrderService.updatePromotionUsage(orderData.items);
+    } catch (error) {
+      logger.error('Lỗi cập nhật promotion usage:', error);
+      // Tuỳ business: Có thể revert đơn hàng hoặc chỉ log lỗi để dev check
+    }
 
     return {
       message: orderData.payment.method === 'payos' ? 'Tạo đơn thành công, vui lòng quét QR.' : 'Tạo đơn thành công.',
