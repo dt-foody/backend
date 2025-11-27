@@ -76,7 +76,7 @@ class CouponService extends BaseService {
 
     // 2. Get Private Vouchers
     const vouchers = await Voucher.find({
-      customer: user.id,
+      profile: user.profile.id || user.profile._id || user.profile,
       status: 'UNUSED',
       expiredAt: { $gte: now },
     })
