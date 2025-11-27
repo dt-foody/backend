@@ -60,6 +60,7 @@ const CouponSchema = new Schema(
 
 // --- Index ---
 CouponSchema.index({ status: 1, startDate: 1, endDate: 1 });
+CouponSchema.index({ code: 1, status: 1 });
 CouponSchema.index({ code: 1 }, { unique: true, sparse: true });
 
 // --- Plugins ---

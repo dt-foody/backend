@@ -16,12 +16,10 @@ const DiscountSnapshotSchema = new Schema(
 const VoucherSchema = new Schema(
   {
     // --- Liên kết ---
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer', required: true },
+    customer: { type: Schema.Types.ObjectId, ref: 'Customer', default: null },
     coupon: { type: Schema.Types.ObjectId, ref: 'Coupon', required: true },
-    order: { type: Schema.Types.ObjectId, ref: 'Order' },
-
-    // --- Mã voucher ---
-    code: { type: String, unique: true, required: true },
+    orders: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
+    code: { type: String, required: true }, // Bỏ unique: true ở đây
 
     // --- Nguồn phát hành ---
     issueMode: {
