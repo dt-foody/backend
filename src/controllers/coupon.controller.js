@@ -1,42 +1,27 @@
-// src/controllers/coupon.controller.js
 const httpStatus = require('http-status');
 const BaseController = require('../utils/_base.controller');
-const { couponService } = require('../services');
+const { couponService, voucherService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
 
-const { OK } = httpStatus;
+const { OK, CREATED } = httpStatus;
 
 class CouponController extends BaseController {
   constructor() {
     super(couponService);
-    // ✅ wrap bằng catchAsync, bind this; KHÔNG dùng class field
     this.available = catchAsync(this.available.bind(this));
+    this.claim = catchAsync(this.claim.bind(this));
   }
 
-  // method chuẩn (prototype method) → ESLint/Node parse được
   async available(req, res) {
-    const { user } = req;
+    const { orderValue } = req.query;
+    // req.user sẽ null nếu guest, middleware auth phải để 'optional'
+    const result = await this.service.getAvailableCoupons(req.user, Number(orderValue) || 0);
+    res.status(OK).json(result);
+  }
 
-    const now = new Date();
-    const filter = {
-      status: 'ACTIVE',
-      public: true, // đổi thành isPublic nếu schema bạn dùng tên đó
-      startDate: { $lte: now },
-      endDate: { $gte: now },
-      isDeleted: { $ne: true },
-      $or: [
-        { maxUses: 0 }, // không giới hạn
-        { $expr: { $lt: ['$usedCount', '$maxUses'] } }, // còn lượt dùng
-      ],
-    };
-
-    const options = {
-      ...(req.options || {}),
-      sort: { priority: -1, startDate: 1, createdAt: -1 },
-    };
-
-    const coupons = await this.service.findAll(filter, options);
-    res.status(OK).json(coupons);
+  async claim(req, res) {
+    const voucher = await voucherService.claimCoupon(req.user.id, req.body.code);
+    res.status(CREATED).json(voucher);
   }
 }
 

@@ -19,7 +19,7 @@ const VoucherSchema = new Schema(
     customer: { type: Schema.Types.ObjectId, ref: 'Customer', default: null },
     coupon: { type: Schema.Types.ObjectId, ref: 'Coupon', required: true },
     orders: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
-    code: { type: String, required: true }, // Bỏ unique: true ở đây
+    code: { type: String, required: true },
 
     // --- Nguồn phát hành ---
     issueMode: {
