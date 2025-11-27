@@ -16,7 +16,16 @@ const DiscountSnapshotSchema = new Schema(
 const VoucherSchema = new Schema(
   {
     // --- Liên kết ---
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer', default: null },
+    profileType: {
+      type: String,
+      enum: ['Customer', 'Employee', null],
+      default: null, // cho phép null
+    },
+    profile: {
+      type: Schema.Types.ObjectId,
+      refPath: 'profileType',
+      default: null, // cho phép null
+    },
     coupon: { type: Schema.Types.ObjectId, ref: 'Coupon', required: true },
     orders: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
     code: { type: String, required: true },
@@ -55,7 +64,7 @@ const VoucherSchema = new Schema(
 );
 
 // --- Index ---
-VoucherSchema.index({ customer: 1 });
+VoucherSchema.index({ profile: 1 });
 VoucherSchema.index({ coupon: 1 });
 VoucherSchema.index({ code: 1 }, { unique: true });
 VoucherSchema.index({ status: 1, expiredAt: 1 });

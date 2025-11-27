@@ -2,42 +2,47 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 const { objectId } = require('./custom.validation');
 
-// Sub-schema cho discountSnapshot (dựa trên model)
+// Sub-schema cho discountSnapshot
 const discountSnapshotSchema = Joi.object({
   type: Joi.string().valid('fixed_amount', 'percentage').required(),
   value: Joi.number().min(0).required(),
   maxDiscount: Joi.number().min(0).default(0),
+  // Nếu bạn có lưu minOrderAmount trong snapshot thì thêm dòng dưới, nếu không thì bỏ qua
+  // minOrderAmount: Joi.number().min(0).default(0),
 }).required();
 
 const create = {
   body: Joi.object().keys({
-    customer: Joi.string().custom(objectId).required(),
+    // --- Thay đổi Customer thành Dynamic Profile ---
+    // Cho phép null (trường hợp Guest hoặc Public Voucher chưa claim)
+    profile: Joi.string().custom(objectId).allow(null),
+    profileType: Joi.string().valid('Customer', 'Employee').allow(null),
+
     coupon: Joi.string().custom(objectId).required(),
-    code: Joi.string().required(), // Admin hoặc hệ thống phải tạo code khi cấp phát
+    code: Joi.string().required(),
 
     issueMode: Joi.string().valid('CLAIM', 'ADMIN', 'AUTO', 'REFERRAL').default('ADMIN'),
     status: Joi.string().valid('UNUSED', 'USED', 'EXPIRED', 'REVOKED').default('UNUSED'),
 
-    expiredAt: Joi.date().required(), // Ngày hết hạn là bắt buộc khi tạo
+    expiredAt: Joi.date().required(),
     usageLimit: Joi.number().min(1).default(1),
 
-    // Snapshot là bắt buộc khi tạo voucher
     discountSnapshot: discountSnapshotSchema,
-
-    // orderId, usedAt, revokeAt... sẽ được cập nhật sau
   }),
 };
 
 const paginate = {
   query: Joi.object().keys({
-    search: Joi.string().allow('', null), // Dùng để search `code`
+    search: Joi.string().allow('', null),
     populate: Joi.string().allow('', null),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
 
-    // --- Filters ---
-    customer: Joi.string().custom(objectId),
+    // --- Filters updated ---
+    profile: Joi.string().custom(objectId), // Tìm theo ID người dùng
+    profileType: Joi.string().valid('Customer', 'Employee'), // Tìm theo loại user
+
     coupon: Joi.string().custom(objectId),
     order: Joi.string().custom(objectId),
     status: Joi.string().valid('UNUSED', 'USED', 'EXPIRED', 'REVOKED'),
@@ -57,23 +62,18 @@ const updateById = {
   }),
   body: Joi.object()
     .keys({
-      // Các trường này hiếm khi update, nhưng vẫn cho phép
-      customer: Joi.string().custom(objectId),
+      // --- Update Profile ---
+      profile: Joi.string().custom(objectId).allow(null),
+      profileType: Joi.string().valid('Customer', 'Employee').allow(null),
+
       coupon: Joi.string().custom(objectId),
+      // order có thể là 1 ID hoặc mảng ID tuỳ logic, ở đây giữ nguyên custom(objectId) nếu update từng cái
       order: Joi.string().custom(objectId).allow(null),
       code: Joi.string(),
 
-      // Các trường thường update
       status: Joi.string().valid('UNUSED', 'USED', 'EXPIRED', 'REVOKED'),
       expiredAt: Joi.date(),
       usageLimit: Joi.number().min(0),
-
-      // Không nên cho phép update snapshot, nhưng nếu cần:
-      // discountSnapshot: Joi.object({
-      //   type: Joi.string().valid('fixed_amount', 'percentage'),
-      //   value: Joi.number().min(0),
-      //   maxDiscount: Joi.number().min(0),
-      // }),
     })
     .min(1),
 };
@@ -84,13 +84,6 @@ const deleteById = {
   }),
 };
 
-// const deleteManyById = {
-//   body: Joi.object().keys({
-//     ids: Joi.array().items(Joi.string().custom(objectId)).min(1).required(),
-//   }),
-// };
-
-// Hoặc nếu bạn muốn giữ nguyên logic `params` cho deleteManyById
 const deleteManyById = {
   params: Joi.object().keys({
     ids: Joi.string()
