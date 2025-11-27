@@ -2,15 +2,6 @@ const Joi = require('joi');
 const mongoose = require('mongoose');
 const { objectId } = require('./custom.validation');
 
-// Sub-schema cho discountSnapshot
-const discountSnapshotSchema = Joi.object({
-  type: Joi.string().valid('fixed_amount', 'percentage').required(),
-  value: Joi.number().min(0).required(),
-  maxDiscount: Joi.number().min(0).default(0),
-  // Nếu bạn có lưu minOrderAmount trong snapshot thì thêm dòng dưới, nếu không thì bỏ qua
-  // minOrderAmount: Joi.number().min(0).default(0),
-}).required();
-
 const create = {
   body: Joi.object().keys({
     // --- Thay đổi Customer thành Dynamic Profile ---
@@ -19,15 +10,13 @@ const create = {
     profileType: Joi.string().valid('Customer', 'Employee').allow(null),
 
     coupon: Joi.string().custom(objectId).required(),
-    code: Joi.string().required(),
+    code: Joi.string().allow(null, ''),
 
     issueMode: Joi.string().valid('CLAIM', 'ADMIN', 'AUTO', 'REFERRAL').default('ADMIN'),
     status: Joi.string().valid('UNUSED', 'USED', 'EXPIRED', 'REVOKED').default('UNUSED'),
 
     expiredAt: Joi.date().required(),
     usageLimit: Joi.number().min(1).default(1),
-
-    discountSnapshot: discountSnapshotSchema,
   }),
 };
 
