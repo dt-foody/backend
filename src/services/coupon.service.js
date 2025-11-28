@@ -26,22 +26,21 @@ class CouponService extends BaseService {
     };
 
     // 1. Get Public Coupons
-    const publicCoupons = await this.model.find({
-      status: 'ACTIVE',
-      public: true,
-      claimable: false,
-      startDate: { $lte: now },
-      endDate: { $gte: now },
-      $or: [{ maxUses: 0 }, { $expr: { $lt: ['$usedCount', '$maxUses'] } }],
-    });
+    const publicCoupons = await this.model
+      .find({
+        status: 'ACTIVE',
+        public: true,
+        claimable: false, // Coupon dùng chung, không cần lưu
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        $or: [{ maxUses: 0 }, { $expr: { $lt: ['$usedCount', '$maxUses'] } }],
+      })
+      .lean();
 
     const formattedPublic = publicCoupons.map((c) => {
-      // eslint-disable-next-line no-param-reassign
-      c = c.toObject();
       let isApplicable = true;
       let reason = null;
 
-      // Check conditions (Chỉ check nếu mảng conditions con có dữ liệu)
       const hasConditions = c.conditions && Array.isArray(c.conditions) && c.conditions.length > 0;
 
       if (hasConditions) {
@@ -64,7 +63,8 @@ class CouponService extends BaseService {
 
       return {
         ...c,
-        id: c._id || c.id,
+        id: c._id,
+        _id: undefined,
         type: 'PUBLIC',
         isClaimed: false,
         isApplicable,
@@ -72,42 +72,63 @@ class CouponService extends BaseService {
       };
     });
 
-    if (!user) return formattedPublic; // Trả về nếu là Guest
+    if (!user) return formattedPublic;
 
     // 2. Get Private Vouchers
+    // Lấy voucher của user (Đã lưu hoặc được tặng)
     const vouchers = await Voucher.find({
       profile: user.profile.id || user.profile._id || user.profile,
       status: 'UNUSED',
       expiredAt: { $gte: now },
     })
-      .populate('coupon', 'name description')
+      .populate('coupon')
       .lean();
 
-    const formattedPersonal = vouchers.map((v) => {
-      let isApplicable = true;
-      let reason = null;
-      if (orderValue < v.discountSnapshot.minOrderAmount) {
-        isApplicable = false;
-        reason = 'MIN_ORDER_AMOUNT_NOT_MET';
-      }
-      return {
-        id: v.coupon._id,
-        voucherId: v._id,
-        code: v.code,
-        name: v.coupon?.name,
-        description: v.coupon?.description,
-        value: v.discountSnapshot.value,
-        valueType: v.discountSnapshot.type,
-        minOrderAmount: v.discountSnapshot.minOrderAmount,
-        maxDiscountAmount: v.discountSnapshot.maxDiscount,
-        endDate: v.expiredAt,
-        type: 'PERSONAL',
-        isClaimed: true,
-        isApplicable,
-        inapplicableReason: reason,
-      };
-    });
+    const formattedPersonal = vouchers
+      .filter((v) => v.coupon) // Đề phòng trường hợp Coupon gốc bị xóa cứng
+      .map((v) => {
+        const couponBase = v.coupon;
+        const snapshot = v.discountSnapshot || {}; // Lấy thông tin giá trị lúc phát hành
 
+        let isApplicable = true;
+        let reason = null;
+
+        // Ưu tiên check theo snapshot (thỏa thuận lúc nhận voucher) hoặc fallback về coupon gốc
+        const currentMinOrder = snapshot.minOrderAmount ?? couponBase.minOrderAmount ?? 0;
+
+        if (orderValue < currentMinOrder) {
+          isApplicable = false;
+          reason = 'MIN_ORDER_AMOUNT_NOT_MET';
+        }
+
+        return {
+          // A. Lấy toàn bộ data từ Coupon gốc (để có name, description, image...)
+          ...couponBase,
+
+          // B. Ghi đè các thông tin quan trọng từ Voucher/Snapshot
+          // (Vì voucher có thể có hạn dùng và giá trị khác coupon gốc tại thời điểm dùng)
+          id: couponBase._id, // ID của coupon gốc (để group hoặc hiển thị)
+          voucherId: v._id, // ID riêng của voucher (để apply khi checkout)
+          voucherCode: v.code,
+
+          // Ghi đè giá trị giảm giá từ snapshot (đảm bảo quyền lợi user ko bị đổi)
+          value: snapshot.value ?? couponBase.value,
+          valueType: snapshot.type ?? couponBase.valueType,
+          maxDiscountAmount: snapshot.maxDiscount ?? couponBase.maxDiscountAmount,
+          minOrderAmount: currentMinOrder,
+
+          startDate: v.issuedAt, // Ngày bắt đầu là ngày nhận
+          endDate: v.expiredAt, // Ngày hết hạn riêng của voucher
+
+          // C. Các cờ đánh dấu
+          type: 'PERSONAL',
+          isClaimed: true, // Voucher này đã thuộc về user
+          isApplicable,
+          inapplicableReason: reason,
+        };
+      });
+
+    // Merge 2 danh sách
     return [...formattedPublic, ...formattedPersonal];
   }
 }
