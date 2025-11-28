@@ -93,6 +93,43 @@ function findById(req, res, next) {
 }
 
 function updateById(req, res, next) {
+  const { status } = req.body;
+
+  if (status) {
+    const now = new Date(); // Lấy thời gian hiện tại để đảm bảo đồng bộ
+
+    switch (status) {
+      case 'REVOKED':
+        req.body.revokeAt = now;
+        // Nếu trong req có thông tin user đăng nhập (thường là req.user), bạn có thể gán thêm:
+        if (req.user) {
+          req.body.revokedBy = req.user._id;
+        }
+        break;
+
+      case 'EXPIRED':
+        // Cập nhật thời gian hết hạn là ngay lập tức (hoặc giữ nguyên logic nếu chỉ muốn đổi status)
+        req.body.expiredAt = now;
+        break;
+
+      case 'USED':
+        req.body.usedAt = now;
+        // Có thể tăng usageCount tại đây nếu logic update cho phép, hoặc xử lý ở service
+        // req.body.$inc = { usageCount: 1 };
+        break;
+
+      case 'UNUSED':
+        // Nếu reset về UNUSED, có thể cần xóa các trường thời gian cũ
+        req.body.revokeAt = null;
+        req.body.revokedBy = null;
+        req.body.usedAt = null;
+        // req.body.expiredAt = null; // Cẩn thận: thường expiredAt là ngày hết hạn dự kiến, không nên xóa trừ khi gia hạn.
+        break;
+      default:
+        break;
+    }
+  }
+
   next();
 }
 
