@@ -65,7 +65,7 @@ class CouponService extends BaseService {
         ...c,
         id: c._id,
         _id: undefined,
-        type: 'PUBLIC',
+        couponScope: 'PUBLIC',
         isClaimed: false,
         isApplicable,
         inapplicableReason: reason,
@@ -121,7 +121,7 @@ class CouponService extends BaseService {
           endDate: v.expiredAt, // Ngày hết hạn riêng của voucher
 
           // C. Các cờ đánh dấu
-          type: 'PERSONAL',
+          couponScope: 'PERSONAL',
           isClaimed: true, // Voucher này đã thuộc về user
           isApplicable,
           inapplicableReason: reason,
