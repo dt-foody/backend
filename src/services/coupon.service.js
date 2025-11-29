@@ -41,7 +41,11 @@ class CouponService extends BaseService {
       let isApplicable = true;
       let reason = null;
 
-      const hasConditions = c.conditions && Array.isArray(c.conditions) && c.conditions.length > 0;
+      const hasConditions =
+        c.conditions &&
+        c.conditions.conditions &&
+        Array.isArray(c.conditions.conditions) &&
+        c.conditions.conditions.length > 0;
 
       if (hasConditions) {
         if (!user) {
