@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 const _ = require('lodash');
 const BaseService = require('../utils/_base.service');
-const { evaluateConditions } = require('../utils/conditionEvaluator');
+const { evaluateConditions, requiresUserContext } = require('../utils/conditionEvaluator');
 const { Coupon, Voucher } = require('../models');
 
 class CouponService extends BaseService {
@@ -48,7 +48,8 @@ class CouponService extends BaseService {
         c.conditions.conditions.length > 0;
 
       if (hasConditions) {
-        if (!user) {
+        const needsUser = requiresUserContext(c.conditions);
+        if (needsUser && !user) {
           isApplicable = false;
           reason = 'LOGIN_REQUIRED';
         } else {

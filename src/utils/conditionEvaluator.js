@@ -1,6 +1,6 @@
 // src/utils/conditionEvaluator.js
 
-const _ = require('lodash'); // Dùng lodash để get nested safe (tuỳ chọn)
+const _ = require('lodash');
 const logger = require('../config/logger');
 
 // ---------------------------------------------------------
@@ -8,7 +8,7 @@ const logger = require('../config/logger');
 // ---------------------------------------------------------
 const OPERATORS = {
   // --- Text / General ---
-  EQUALS: (a, b) => a === b, // Dùng == để auto cast string/number nếu cần
+  EQUALS: (a, b) => a === b,
   NOT_EQUALS: (a, b) => a !== b,
   CONTAINS: (a, b) =>
     (a || '')
@@ -30,7 +30,6 @@ const OPERATORS = {
   LESS_THAN_OR_EQUALS: (a, b) => Number(a) <= Number(b),
 
   // --- Boolean ---
-  // (EQUALS handle được rồi, nhưng nếu cần explicit)
   IS_TRUE: (a) => a === true,
   IS_FALSE: (a) => a === false,
 
@@ -49,51 +48,76 @@ const OPERATORS = {
 
 // ---------------------------------------------------------
 // 2. FIELD RESOLVERS (Mapper dữ liệu)
-// Context gồm: { user, order, summary }
 // ---------------------------------------------------------
 const FIELD_RESOLVERS = {
-  // --- Group: Khách hàng ---
-  customer_name: (context) => context.user?.name,
-
+  // --- CUSTOMER INFO (Cần User Context) ---
+  customer_name: (context) => context.customer?.name || '',
+  customer_gender: (context) => context.customer?.gender || '',
   customer_age: (context) => {
-    if (!context.user?.dateOfBirth) return null;
-    const dob = new Date(context.user.dateOfBirth);
-    const diffMs = Date.now() - dob.getTime();
-    const ageDt = new Date(diffMs);
-    return Math.abs(ageDt.getUTCFullYear() - 1970);
+    const dob = context.customer?.birthDate;
+    if (!dob) return null;
+    const birth = new Date(dob);
+    const diff = Date.now() - birth.getTime();
+    // Tính tuổi tương đối chính xác
+    return new Date(diff).getUTCFullYear() - 1970;
   },
 
-  customer_is_new: (context) => {
-    // Ví dụ: User tạo trong vòng 7 ngày được gọi là mới
-    if (!context.user?.createdAt) return false;
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return new Date(context.user.createdAt) > sevenDaysAgo;
+  // --- ORDER HISTORY (Cần User Context) ---
+  order_count: (context) => context.customer?.totalOrder || 0,
+
+  // --- ORDER CONTEXT (Không cần User) ---
+  order_total_items: (context) => {
+    const items = context.order?.items;
+    if (!items?.length) return 0;
+    return items.reduce((sum, it) => sum + (it.quantity || 0), 0);
   },
 
-  // --- Group: Đơn hàng (Context order hiện tại) ---
-  order_count: (context) => context.user?.orderStats?.totalOrders || 0, // Cần aggregate trước hoặc lưu trong user
-
-  order_date: (context) => context.order?.createdAt || new Date(),
-
-  order_contains_product_count: (context) => {
-    // Đếm tổng số lượng item trong giỏ
-    if (!context.order?.items) return 0;
-    return context.order.items.reduce((sum, item) => sum + item.quantity, 0);
-  },
-
-  // --- Group: Sản phẩm / Danh mục (Mở rộng sau này) ---
-  product_id: (context) => context.order?.items?.map((i) => i.product.id), // Trả về mảng ID để dùng operator IN
-  category_id: (context) => context.order?.items?.map((i) => i.product.categoryId),
+  // Bạn có thể thêm các field khác ở đây (ví dụ: order_total_value, shipping_city...)
 };
 
 // ---------------------------------------------------------
-// 3. MAIN EVALUATOR
+// 3. DEFINITION: USER DEPENDENT FIELDS
+// Danh sách các trường BẮT BUỘC phải có user mới đánh giá được
 // ---------------------------------------------------------
+const USER_DEPENDENT_FIELDS = [
+  'customer_name',
+  'customer_gender',
+  'customer_age',
+  'order_count',
+  // Thêm field mới vào đây nếu nó lấy từ context.customer
+];
+
+// ---------------------------------------------------------
+// 4. HELPER FUNCTIONS
+// ---------------------------------------------------------
+
+/**
+ * Kiểm tra xem bộ điều kiện có phụ thuộc vào User/Customer không
+ * Dựa trên danh sách USER_DEPENDENT_FIELDS cụ thể.
+ * @param {Object} ruleNode
+ * @returns {boolean} True nếu cần login
+ */
+const requiresUserContext = (ruleNode) => {
+  // 1. Nếu node rỗng -> Không cần
+  if (!ruleNode || _.isEmpty(ruleNode)) return false;
+
+  // 2. Nếu là Group (AND/OR), đệ quy kiểm tra các con
+  if (ruleNode.conditions && Array.isArray(ruleNode.conditions)) {
+    return ruleNode.conditions.some((subRule) => requiresUserContext(subRule));
+  }
+
+  // 3. Nếu là Leaf (Điều kiện cụ thể), check fieldId có trong whitelist không
+  if (ruleNode.fieldId) {
+    return USER_DEPENDENT_FIELDS.includes(ruleNode.fieldId);
+  }
+
+  return false;
+};
+
 /**
  * Đánh giá một bộ quy tắc
  * @param {Object} ruleNode - Node điều kiện (Root hoặc nested)
- * @param {Object} context - Dữ liệu runtime ({ user, order })
+ * @param {Object} context - Dữ liệu runtime ({ customer, order })
  * @returns {boolean}
  */
 const evaluateConditions = (ruleNode, context) => {
@@ -116,14 +140,14 @@ const evaluateConditions = (ruleNode, context) => {
   }
 
   // 3. Nếu là Leaf (Điều kiện cụ thể)
-  // ruleNode dạng: { fieldId: 'customer_age', operator: 'GREATER_THAN', value: 18 }
   const { fieldId, operator, value } = ruleNode;
 
   // Lấy hàm resolve dữ liệu
   const resolver = FIELD_RESOLVERS[fieldId];
   if (!resolver) {
+    // Nếu fieldId lạ (không có trong code), log warning và return false (hoặc true tùy policy)
     logger.warn(`[ConditionEvaluator] Unknown fieldId: ${fieldId}`);
-    return false; // Hoặc true tuỳ policy
+    return false;
   }
 
   // Lấy giá trị thực tế từ context
@@ -140,4 +164,7 @@ const evaluateConditions = (ruleNode, context) => {
   return compareFn(actualValue, value);
 };
 
-module.exports = { evaluateConditions };
+module.exports = {
+  evaluateConditions,
+  requiresUserContext,
+};
