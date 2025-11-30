@@ -25,6 +25,8 @@ const OrderItemComboSelectionSchema = new Schema(
 
     product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     productName: { type: String, required: true },
+    basePrice: { type: Number, default: 0 },
+    additionalPrice: { type: Number, default: 0 },
 
     options: [OrderItemOptionSchema],
   },

@@ -37,7 +37,7 @@ class OrderService extends BaseService {
 
   /* ============================================================
    * 0. Chuẩn hoá options: { Size: [{name, priceModifier}], ... }
-   *    -> [{groupName, optionName, priceModifier}]
+   * -> [{groupName, optionName, priceModifier}]
    * ============================================================ */
   static normalizeOptions(optionsObj) {
     if (!optionsObj || typeof optionsObj !== 'object') return [];
@@ -57,6 +57,7 @@ class OrderService extends BaseService {
   static async buildOrderItemsFromMenu(items) {
     const now = new Date();
 
+    // Helper: Tìm Promotion đang active
     const findActivePromotion = async (itemId, type = 'product') => {
       const query = {
         isActive: true,
@@ -65,129 +66,187 @@ class OrderService extends BaseService {
         isDeleted: false,
       };
 
-      // Gắn điều kiện theo loại (Product hoặc Combo)
       if (type === 'product') query.product = itemId;
       if (type === 'combo') query.combo = itemId;
 
-      // Tìm promotion có độ ưu tiên cao nhất (priority giảm dần)
+      // Tìm promotion ưu tiên cao nhất
       const promotion = await PricePromotion.findOne(query).sort({ priority: -1 });
 
       if (!promotion) return null;
 
-      // Check logic số lượng tổng (Global limit)
-      // Nếu maxQuantity > 0 thì mới check, = 0 là không giới hạn
+      // Check giới hạn tổng
       if (promotion.maxQuantity > 0 && promotion.usedQuantity >= promotion.maxQuantity) {
         return null;
       }
 
-      // Check logic số lượng theo ngày (Daily limit)
+      // Check giới hạn ngày
       if (promotion.dailyMaxUses > 0) {
         const isSameDay = promotion.lastUsedDate && new Date(promotion.lastUsedDate).toDateString() === now.toDateString();
-
-        // Nếu cùng ngày và đã hết lượt -> tạch
         if (isSameDay && promotion.dailyUsedCount >= promotion.dailyMaxUses) {
           return null;
         }
-        // Nếu qua ngày mới -> reset logic (tạm coi là valid, việc reset count sẽ làm ở bước thanh toán)
+      }
+      return promotion;
+    };
+
+    // Helper: Tính số tiền được giảm
+    const calculateDiscountAmount = (originalPrice, promotion) => {
+      if (!promotion) return 0;
+      let discountAmount = 0;
+
+      if (promotion.discountType === 'percentage') {
+        discountAmount = originalPrice * (promotion.discountValue / 100);
+        if (promotion.maxDiscountAmount && promotion.maxDiscountAmount > 0) {
+          if (discountAmount > promotion.maxDiscountAmount) {
+            discountAmount = promotion.maxDiscountAmount;
+          }
+        }
+      } else if (promotion.discountType === 'fixed_amount') {
+        discountAmount = promotion.discountValue;
       }
 
-      return promotion;
+      return discountAmount;
     };
 
     return Promise.all(
       items.map(async (cartItem) => {
-        let finalPrice = 0;
-
-        /* ---------------- PRODUCT ------------------- */
+        /* ------------------------------------------------------------------
+         * TRƯỜNG HỢP 1: PRODUCT LẺ
+         * ------------------------------------------------------------------ */
         if (cartItem.itemType === 'Product') {
           const product = await Product.findById(cartItem.item.id);
           if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
 
-          // 1. TÌM PROMOTION
           const activePromo = await findActivePromotion(product._id, 'product');
 
-          // 2. TÍNH GIÁ BASE (Có giảm giá hay không)
-          let itemBasePrice = product.basePrice;
+          const originalBasePrice = product.basePrice;
           let appliedPromotionId = null;
+          let discountAmount = 0;
 
           if (activePromo) {
-            let discountAmount = 0;
-            if (activePromo.discountType === 'percentage') {
-              discountAmount = (product.basePrice * activePromo.discountValue) / 100;
-            } else if (activePromo.discountType === 'fixed_amount') {
-              discountAmount = activePromo.discountValue;
-            }
-
-            // Giá không được âm
-            itemBasePrice = Math.max(0, product.basePrice - discountAmount);
+            discountAmount = calculateDiscountAmount(originalBasePrice, activePromo);
             appliedPromotionId = activePromo._id;
           }
 
-          // 3. TÍNH GIÁ OPTIONS
+          const basePrice = Math.max(0, originalBasePrice - discountAmount);
+
           const normalizedOptions = OrderService.normalizeOptions(cartItem.options);
           const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
 
-          // 4. TỔNG TIỀN
-          finalPrice = itemBasePrice + optionsPrice;
+          const finalPrice = basePrice + optionsPrice;
 
           return {
             item: product._id,
             itemType: 'Product',
             name: product.name,
             quantity: cartItem.quantity,
-
-            originalBasePrice: product.basePrice, // Giá gốc trên menu (40k)
-            basePrice: itemBasePrice, // Giá thực tế bán (32k)
-            price: finalPrice, // Tổng tiền 1 item (44k)
-
+            originalBasePrice,
+            basePrice,
+            price: finalPrice,
             options: normalizedOptions,
             comboSelections: [],
             note: cartItem.note || '',
-            promotion: appliedPromotionId, // Lưu ID để tracking usage sau này
+            promotion: appliedPromotionId,
           };
         }
 
-        /* ---------------- COMBO ------------------- */
+        /* ------------------------------------------------------------------
+         * TRƯỜNG HỢP 2: COMBO
+         * ------------------------------------------------------------------ */
         if (cartItem.itemType === 'Combo') {
           const combo = await Combo.findById(cartItem.item.id);
           if (!combo) throw new Error(`Combo không tồn tại: ${cartItem.item.name}`);
 
+          // A. Tìm Promotion cho Combo
+          const activePromo = await findActivePromotion(combo._id, 'combo');
+          let appliedPromotionId = null;
+          let discountAmount = 0;
+
+          // B. Tính giá gói Combo (Sau khi giảm giá)
+          const originalComboPrice = combo.comboPrice || 0;
+          if (activePromo) {
+            discountAmount = calculateDiscountAmount(originalComboPrice, activePromo);
+            appliedPromotionId = activePromo._id;
+          }
+          const comboBasePrice = Math.max(0, originalComboPrice - discountAmount);
+
+          // C. Xử lý các món con (Selections)
+          let totalMarketPriceOfComponents = 0;
+          let totalOptionsSurcharge = 0;
+          let totalProductSurcharge = 0; // Tổng tiền phụ thu các món
+
           const selectionPromises = (cartItem.comboSelections || []).map(async (selection) => {
             const product = await Product.findById(selection.product.id);
             if (!product) {
-              throw new Error(`Sản phẩm "${selection.product.name}" trong combo "${combo.name}" không tồn tại`);
+              throw new Error(`Món "${selection.productName}" trong combo không tồn tại`);
             }
+
+            // --- [QUAN TRỌNG] Lấy additionalPrice từ cấu hình Combo trong DB ---
+            let additionalPrice = 0;
+            const comboSlotConfig = (combo.items || []).find((slot) => slot.slotName === selection.slotName);
+
+            if (comboSlotConfig) {
+              const productConfig = (comboSlotConfig.selectableProducts || []).find(
+                (p) => p.product.toString() === product._id.toString()
+              );
+              if (productConfig) {
+                additionalPrice = productConfig.additionalPrice || 0;
+              }
+            }
+            // -------------------------------------------------------------------
 
             const normalizedOptions = OrderService.normalizeOptions(selection.options);
             const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
-            const selectionPrice = product.basePrice + optionsPrice;
+
+            // Giá trị thực tế nếu mua lẻ = Giá gốc SP + Giá Options
+            const componentMarketPrice = product.basePrice + optionsPrice;
 
             return {
-              data: {
+              doc: {
                 product: product._id,
                 productName: product.name,
                 basePrice: product.basePrice,
+                // Lưu thêm additionalPrice vào snapshot để đối chiếu
+                additionalPrice,
                 options: normalizedOptions,
                 slotName: selection.slotName,
               },
-              price: selectionPrice,
+              marketPrice: componentMarketPrice,
+              optionPrice: optionsPrice,
+              additionalPrice,
             };
           });
 
-          const resolved = await Promise.all(selectionPromises);
-          const totalSelectionsPrice = resolved.reduce((s, r) => s + r.price, 0);
-          finalPrice = (combo.comboPrice || 0) + totalSelectionsPrice;
+          const resolvedSelections = await Promise.all(selectionPromises);
+
+          // Tổng hợp số liệu
+          totalMarketPriceOfComponents = resolvedSelections.reduce((sum, r) => sum + r.marketPrice, 0);
+          totalOptionsSurcharge = resolvedSelections.reduce((sum, r) => sum + r.optionPrice, 0);
+          totalProductSurcharge = resolvedSelections.reduce((sum, r) => sum + r.additionalPrice, 0);
+
+          // D. Tính Final Price cho 1 Combo Item
+          // = Giá gói Combo (đã giảm) + Tổng tiền Options + Tổng tiền phụ thu món (additionalPrice)
+          const finalPrice = comboBasePrice + totalOptionsSurcharge + totalProductSurcharge;
 
           return {
             item: combo._id,
             itemType: 'Combo',
             name: combo.name,
             quantity: cartItem.quantity,
-            basePrice: combo.comboPrice || 0,
+
+            // Giá trị thực tế của toàn bộ các món trong combo (để tính tiết kiệm)
+            originalBasePrice: totalMarketPriceOfComponents,
+
+            // Giá gói combo cơ bản (đã trừ khuyến mãi)
+            basePrice: comboBasePrice,
+
+            // Giá cuối cùng khách phải trả
             price: finalPrice,
+
             options: [],
-            comboSelections: resolved.map((r) => r.data),
+            comboSelections: resolvedSelections.map((r) => r.doc),
             note: cartItem.note || '',
+            promotion: appliedPromotionId,
           };
         }
 
@@ -198,7 +257,7 @@ class OrderService extends BaseService {
 
   /* ============================================================
    * 1B. Build items từ SNAPSHOT payload (dùng cho UPDATE admin)
-   *     -> KHÔNG query Product/Combo, giữ nguyên giá thời điểm đó
+   * -> KHÔNG query Product/Combo, giữ nguyên giá thời điểm đó
    * ============================================================ */
   static buildOrderItemsFromSnapshot(items) {
     if (!Array.isArray(items)) return [];
@@ -218,8 +277,11 @@ class OrderService extends BaseService {
           itemType: 'Product',
           name: cartItem.item.name,
           quantity,
+
+          originalBasePrice: cartItem.originalBasePrice || basePrice, // Giữ nguyên snapshot
           basePrice,
           price: finalPrice,
+
           options: normalizedOptions,
           comboSelections: [],
           note: cartItem.note || '',
@@ -228,36 +290,38 @@ class OrderService extends BaseService {
 
       /* ---------------- COMBO ------------------- */
       if (cartItem.itemType === 'Combo') {
-        const comboPrice = cartItem.item.comboPrice || 0;
+        const comboPrice = cartItem.item.comboPrice || 0; // Giá này có thể hiểu là basePrice (giá gói)
 
         const selectionDocs = (cartItem.comboSelections || []).map((selection) => {
-          const basePrice = selection.product.basePrice || 0;
+          const prodBasePrice = selection.product.basePrice || 0;
           const normalizedOptions = OrderService.normalizeOptions(selection.options);
           const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
-          const selectionPrice = basePrice + optionsPrice;
 
           return {
             doc: {
               product: selection.product.id,
               productName: selection.product.name,
-              basePrice,
+              basePrice: prodBasePrice,
               options: normalizedOptions,
               slotName: selection.slotName,
             },
-            price: selectionPrice,
+            price: optionsPrice, // Chỉ lấy phần phụ thu option để cộng vào giá combo
           };
         });
 
-        const totalSelectionsPrice = selectionDocs.reduce((s, r) => s + r.price, 0);
-        const finalPrice = comboPrice + totalSelectionsPrice;
+        const totalOptionsPrice = selectionDocs.reduce((s, r) => s + r.price, 0);
+        const finalPrice = comboPrice + totalOptionsPrice;
 
         return {
           item: cartItem.item.id,
           itemType: 'Combo',
           name: cartItem.item.name,
           quantity,
+
+          originalBasePrice: cartItem.originalBasePrice || finalPrice, // Fallback
           basePrice: comboPrice,
           price: finalPrice,
+
           options: [],
           comboSelections: selectionDocs.map((r) => r.doc),
           note: cartItem.note || '',
@@ -289,8 +353,8 @@ class OrderService extends BaseService {
 
   /* ============================================================
    * 3. Gom logic build orderData (tính lại totals trong backend)
-   *    useMenuPrice = true -> dùng DB (create)
-   *    useMenuPrice = false -> dùng snapshot (update)
+   * useMenuPrice = true -> dùng DB (create)
+   * useMenuPrice = false -> dùng snapshot (update)
    * ============================================================ */
   async prepareOrderData(payload, { useMenuPrice = true } = {}) {
     const { items, appliedCoupons = [] } = payload;
@@ -395,7 +459,7 @@ class OrderService extends BaseService {
 
   /* ============================================================
    * 4. CREATE ORDER (FE user)
-   *    -> dùng giá từ DB (snapshot tại thời điểm tạo)
+   * -> dùng giá từ DB (snapshot tại thời điểm tạo)
    * ============================================================ */
   async customerOrder(payload) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
@@ -418,7 +482,7 @@ class OrderService extends BaseService {
 
   /* ============================================================
    * 5. CREATE ORDER (Admin Panel)
-   *    -> giống create, nhưng message khác
+   * -> giống create, nhưng message khác
    * ============================================================ */
   async adminPanelCreateOrder(payload) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
@@ -432,8 +496,8 @@ class OrderService extends BaseService {
 
   /* ============================================================
    * 6. UPDATE ORDER (Admin Panel - full body)
-   *    - Dùng SNAPSHOT payload (KHÔNG query Product/Combo)
-   *    - Tính lại items + totals ở backend
+   * - Dùng SNAPSHOT payload (KHÔNG query Product/Combo)
+   * - Tính lại items + totals ở backend
    * ============================================================ */
   async adminPanelUpdateOrder(id, payload) {
     const existing = await this.model.findById(id);

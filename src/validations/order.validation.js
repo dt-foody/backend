@@ -24,6 +24,8 @@ const frontendComboSelectionSchema = Joi.object({
     name: Joi.string().required(),
     basePrice: Joi.number().min(0).required(),
   }).required(),
+  additionalPrice: Joi.number().default(0),
+  itemPrice: Joi.number().default(0),
   options: frontendOptionsSchema.default({}),
 });
 
@@ -62,6 +64,9 @@ const createOrderItemSchema = Joi.object({
     then: Joi.array().items(frontendComboSelectionSchema).min(1).required(),
     otherwise: Joi.allow(null),
   }),
+
+  // ignore it
+  comboSnapshot: Joi.any().strip(),
 });
 
 /* ============================================================
