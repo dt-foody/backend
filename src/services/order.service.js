@@ -1,5 +1,6 @@
+/* eslint-disable no-await-in-loop */
 const BaseService = require('../utils/_base.service');
-const { Order, Product, Combo, Coupon, PricePromotion } = require('../models');
+const { Order, Product, Combo, Coupon, PricePromotion, Voucher } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 const logger = require('../config/logger');
@@ -17,6 +18,9 @@ class OrderService extends BaseService {
     this.calculateShippingFee = this.calculateShippingFee.bind(this);
   }
 
+  /* ============================================================
+   * HELPER METHODS
+   * ============================================================ */
   async calculateShippingFee(customerLocation, orderTime) {
     const storeLoc = config.hereMap.storeLocation;
     const distance = await getDistanceInKm(storeLoc, customerLocation);
@@ -35,13 +39,9 @@ class OrderService extends BaseService {
     });
   }
 
-  // Helper tính giảm giá Promotion
-  // Đã fix lỗi case sensitivity (PERCENT vs percentage)
   static calculatePromotionDiscount(originalPrice, promotion) {
     if (!promotion) return 0;
     let discountAmount = 0;
-
-    // Normalize: chuyển về chữ thường để so sánh
     const type = (promotion.discountType || '').toLowerCase();
 
     if (type === 'percentage' || type === 'percent') {
@@ -56,7 +56,7 @@ class OrderService extends BaseService {
   }
 
   /* ============================================================
-   * 1A. BUILD ITEMS TỪ MENU (CREATE ORDER)
+   * 1. BUILD ITEMS
    * ============================================================ */
   static async buildOrderItemsFromMenu(items) {
     const now = new Date();
@@ -83,7 +83,6 @@ class OrderService extends BaseService {
 
     return Promise.all(
       items.map(async (cartItem) => {
-        // --- 1. PRODUCT LẺ ---
         if (cartItem.itemType === 'Product') {
           const product = await Product.findById(cartItem.item.id);
           if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
@@ -111,21 +110,19 @@ class OrderService extends BaseService {
           };
         }
 
-        // --- 2. COMBO (ĐÃ FIX LOGIC DISCOUNT) ---
         if (cartItem.itemType === 'Combo') {
           const combo = await Combo.findById(cartItem.item.id);
           if (!combo) throw new Error(`Combo không tồn tại: ${cartItem.item.name}`);
 
           let totalSurcharges = 0;
           let totalOptions = 0;
-          let totalComponentBase = 0; // Tổng giá gốc các món con
+          let totalComponentBase = 0;
           let totalMarketPrice = 0;
 
           const selectionPromises = (cartItem.comboSelections || []).map(async (selection) => {
             const product = await Product.findById(selection.product.id);
             if (!product) throw new Error(`Món "${selection.productName}" không tồn tại`);
 
-            // Tìm config slot
             let additionalPrice = 0;
             let slotPrice = 0;
             const comboSlotConfig = (combo.items || []).find((slot) => slot.slotName === selection.slotName);
@@ -146,11 +143,10 @@ class OrderService extends BaseService {
             totalOptions += optionsPrice;
             totalMarketPrice += product.basePrice + optionsPrice + additionalPrice;
 
-            // Logic tích luỹ giá trị nền
             if (combo.pricingMode === 'SLOT_PRICE') {
               totalComponentBase += slotPrice;
             } else if (combo.pricingMode === 'DISCOUNT') {
-              totalComponentBase += product.basePrice; // Dùng giá gốc SP realtime
+              totalComponentBase += product.basePrice;
             }
 
             return {
@@ -167,45 +163,28 @@ class OrderService extends BaseService {
 
           const resolvedSelections = await Promise.all(selectionPromises);
 
-          // === START TÍNH TOÁN GIÁ COMBO ===
-
-          // B1: Tính Internal Price (Giá Combo sau giảm giá nội bộ)
           let priceAfterInternalLogic = 0;
-
           if (combo.pricingMode === 'FIXED') {
             priceAfterInternalLogic = combo.comboPrice;
           } else if (combo.pricingMode === 'SLOT_PRICE') {
             priceAfterInternalLogic = totalComponentBase;
           } else if (combo.pricingMode === 'DISCOUNT') {
-            // [QUAN TRỌNG] Normalize chuỗi "PERCENT" từ DB
-            const discType = (combo.discountType || '').toLowerCase(); // "percent"
-
+            const discType = (combo.discountType || '').toLowerCase();
             if (discType === 'percentage' || discType === 'percent') {
-              // Ví dụ: 70k * (1 - 0.1) = 63k
               priceAfterInternalLogic = Math.round(totalComponentBase * (1 - combo.discountValue / 100));
             } else if (discType === 'fixed_amount' || discType === 'amount') {
               priceAfterInternalLogic = Math.max(0, totalComponentBase - combo.discountValue);
             } else {
-              // Fallback: Nếu data lỗi type thì lấy nguyên giá gốc
               priceAfterInternalLogic = totalComponentBase;
             }
           } else {
             priceAfterInternalLogic = combo.comboPrice || 0;
           }
 
-          // B2: Tính External Promotion (Áp dụng lên giá đã giảm ở B1)
           const activePromo = await findActivePromotion(combo._id, 'combo');
-
-          // Ví dụ: Giá 63k, Promo 10% -> Giảm tiếp 6.3k
           const promoDiscountAmount = OrderService.calculatePromotionDiscount(priceAfterInternalLogic, activePromo);
-
-          // Final Base: 63k - 6.3k = 56.7k
           const finalBasePrice = Math.max(0, priceAfterInternalLogic - promoDiscountAmount);
-
-          // B3: Tổng cuối cùng = Base + Phụ thu + Options
           const finalPrice = finalBasePrice + totalSurcharges + totalOptions;
-
-          // === END TÍNH TOÁN ===
 
           return {
             item: combo._id,
@@ -227,12 +206,10 @@ class OrderService extends BaseService {
     );
   }
 
-  // --- 1B. SNAPSHOT (Update logic) ---
   static buildOrderItemsFromSnapshot(items) {
     if (!Array.isArray(items)) return [];
     return items.map((cartItem) => {
       const quantity = cartItem.quantity || 1;
-
       if (cartItem.itemType === 'Product') {
         const basePrice = cartItem.basePrice || 0;
         const normalizedOptions = OrderService.normalizeOptions(cartItem.options);
@@ -246,22 +223,16 @@ class OrderService extends BaseService {
           options: normalizedOptions,
         };
       }
-
       if (cartItem.itemType === 'Combo') {
         const comboBasePrice = cartItem.basePrice || 0;
         let totalExtras = 0;
-
         const selectionDocs = (cartItem.comboSelections || []).map((selection) => {
           const normalizedOptions = OrderService.normalizeOptions(selection.options);
           const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
           const additionalPrice = selection.additionalPrice || 0;
           totalExtras += optionsPrice + additionalPrice;
-
-          return {
-            doc: { ...selection, options: normalizedOptions },
-          };
+          return { doc: { ...selection, options: normalizedOptions } };
         });
-
         return {
           ...cartItem,
           item: cartItem.item.id || cartItem.item,
@@ -275,37 +246,125 @@ class OrderService extends BaseService {
     });
   }
 
-  static async buildAppliedCoupons(appliedCoupons = []) {
-    return Promise.all(
-      (appliedCoupons || []).map(async (cp) => {
-        const coupon = await Coupon.findById(cp.id);
-        if (!coupon) throw new Error(`Coupon không hợp lệ: ${cp.code}`);
-        return { id: coupon._id, code: coupon.code, type: coupon.type, value: coupon.value };
-      })
-    );
+  /* ============================================================
+   * 2. LOGIC TÍNH DISCOUNT
+   * ============================================================ */
+  static async calculateTotalDiscount({ coupons = [], vouchers = [], orderTotal = 0 }) {
+    let totalDiscountAmount = 0;
+    const appliedDocs = [];
+    const now = new Date();
+
+    const calculateAmount = (valueType, value, maxDiscount, total) => {
+      let amount = 0;
+      if (valueType === 'percentage') {
+        amount = Math.round(total * (value / 100));
+        if (maxDiscount && maxDiscount > 0) {
+          amount = Math.min(amount, maxDiscount);
+        }
+      } else {
+        amount = value;
+      }
+      return amount;
+    };
+
+    // A. COUPONS
+    if (Array.isArray(coupons) && coupons.length > 0) {
+      for (const c of coupons) {
+        const doc = await Coupon.findOne({
+          _id: c.id,
+          code: c.code,
+          status: 'ACTIVE',
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+        });
+
+        if (!doc) {
+          logger.warn(`Coupon invalid: ${c.code}`);
+          continue;
+        }
+        if (doc.maxUses > 0 && doc.usedCount >= doc.maxUses) continue;
+        if (doc.minOrderAmount > 0 && orderTotal < doc.minOrderAmount) continue;
+
+        const amount = calculateAmount(doc.valueType, doc.value, doc.maxDiscountAmount, orderTotal);
+        totalDiscountAmount += amount;
+
+        appliedDocs.push({
+          code: doc.code,
+          name: doc.name || doc.code,
+          ref: doc._id,
+          refModel: 'Coupon',
+          discountType: doc.valueType,
+          discountValue: doc.value,
+          amount,
+        });
+      }
+    }
+
+    // B. VOUCHERS
+    if (Array.isArray(vouchers) && vouchers.length > 0) {
+      for (const v of vouchers) {
+        const doc = await Voucher.findOne({
+          _id: v.voucherId,
+          code: v.voucherCode,
+          status: 'UNUSED',
+        }).populate('coupon');
+
+        if (!doc) continue;
+        if (doc.expiredAt && new Date(doc.expiredAt) < now) continue;
+        if (doc.coupon && doc.coupon.minOrderAmount > 0 && orderTotal < doc.coupon.minOrderAmount) continue;
+
+        const snapshot = doc.discountSnapshot;
+        const amount = calculateAmount(snapshot.type, snapshot.value, snapshot.maxDiscount, orderTotal);
+        totalDiscountAmount += amount;
+
+        appliedDocs.push({
+          code: doc.code,
+          name: doc.coupon?.name || doc.code,
+          ref: doc._id,
+          refModel: 'Voucher',
+          discountType: snapshot.type,
+          discountValue: snapshot.value,
+          amount,
+        });
+      }
+    }
+
+    totalDiscountAmount = Math.min(totalDiscountAmount, orderTotal);
+    return { appliedDocs, totalDiscountAmount };
   }
 
+  /* ============================================================
+   * 3. PREPARE DATA
+   * ============================================================ */
   async prepareOrderData(payload, { useMenuPrice = true } = {}) {
-    const { items, appliedCoupons = [] } = payload;
+    const { items, coupons = [], vouchers = [] } = payload;
+
     const orderItems = useMenuPrice
       ? await OrderService.buildOrderItemsFromMenu(items)
       : OrderService.buildOrderItemsFromSnapshot(items);
 
-    const couponDocs = await OrderService.buildAppliedCoupons(appliedCoupons);
     const totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
-    const discountAmount = typeof payload.discountAmount === 'number' ? payload.discountAmount : 0;
+
+    const { appliedDocs, totalDiscountAmount } = await OrderService.calculateTotalDiscount({
+      coupons,
+      vouchers,
+      orderTotal: totalAmount,
+    });
+
     const shippingFee = typeof payload.shippingFee === 'number' ? payload.shippingFee : 0;
-    const grandTotal = Math.max(0, totalAmount - discountAmount + shippingFee);
+    const grandTotal = Math.max(0, totalAmount - totalDiscountAmount + shippingFee);
     const orderCode = payload.orderCode || Date.now();
+    const deliveryTime = payload.deliveryTime || { option: 'immediate', scheduledAt: null };
 
     const data = {
       ...payload,
       items: orderItems,
-      appliedCoupons: couponDocs,
+      appliedCoupons: appliedDocs,
       totalAmount,
-      discountAmount,
+      discountAmount: totalDiscountAmount,
       shippingFee,
       grandTotal,
+      deliveryTime,
       orderCode,
       payment: { method: payload.payment?.method || 'cash', status: 'pending' },
       status: payload.status || 'pending',
@@ -322,6 +381,44 @@ class OrderService extends BaseService {
       data.payment.checkoutUrl = qr.checkoutUrl;
     }
     return data;
+  }
+
+  /* ============================================================
+   * 4. UPDATE USAGE (ĐÃ CẬP NHẬT LOGIC TĂNG PARENT COUPON)
+   * ============================================================ */
+  static async updateDiscountsUsage(appliedDocs = []) {
+    if (!appliedDocs || appliedDocs.length === 0) return;
+
+    // A. Cập nhật Coupon Public (Tăng usedCount)
+    const couponIds = appliedDocs.filter((d) => d.refModel === 'Coupon').map((d) => d.ref);
+
+    if (couponIds.length > 0) {
+      await Coupon.updateMany({ _id: { $in: couponIds } }, { $inc: { usedCount: 1 } });
+    }
+
+    // B. Cập nhật Voucher Cá Nhân
+    const voucherDocs = appliedDocs.filter((d) => d.refModel === 'Voucher');
+    const voucherIds = voucherDocs.map((d) => d.ref);
+
+    if (voucherIds.length > 0) {
+      // 1. Đánh dấu Voucher là USED
+      await Voucher.updateMany(
+        { _id: { $in: voucherIds } },
+        {
+          status: 'USED',
+          usedAt: new Date(),
+        }
+      );
+
+      // 🔥 2. TÌM VÀ TĂNG USED COUNT CHO COUPON GỐC (PARENT)
+      // Lấy danh sách các Coupon ID từ các Voucher vừa dùng
+      const usedVouchers = await Voucher.find({ _id: { $in: voucherIds } }).select('coupon');
+      const parentCouponIds = usedVouchers.map((v) => v.coupon).filter((id) => !!id);
+
+      if (parentCouponIds.length > 0) {
+        await Coupon.updateMany({ _id: { $in: parentCouponIds } }, { $inc: { usedCount: 1 } });
+      }
+    }
   }
 
   static async updatePromotionUsage(orderItems) {
@@ -355,17 +452,25 @@ class OrderService extends BaseService {
     );
   }
 
+  /* ============================================================
+   * 5. CONTROLLER ACTIONS
+   * ============================================================ */
   async customerOrder(payload) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
     const order = await this.model.create(orderData);
+
     try {
       await OrderService.updatePromotionUsage(orderData.items);
+      // 🔥 Gọi hàm update đã sửa logic
+      await OrderService.updateDiscountsUsage(orderData.appliedCoupons);
     } catch (e) {
-      logger.error(e);
+      logger.error('Error updating usage stats:', e);
     }
+
     return {
       message: orderData.payment.method === 'payos' ? 'Tạo đơn thành công, vui lòng quét QR.' : 'Tạo đơn thành công.',
       order,
+      qrInfo: orderData.payment.method === 'payos' ? { checkoutUrl: orderData.payment.checkoutUrl } : null,
     };
   }
 
@@ -383,21 +488,28 @@ class OrderService extends BaseService {
       ? OrderService.buildOrderItemsFromSnapshot(payload.items)
       : existing.items || [];
 
-    const appliedCoupons = Array.isArray(payload.appliedCoupons)
-      ? await OrderService.buildAppliedCoupons(payload.appliedCoupons)
-      : existing.appliedCoupons || [];
-
     const totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
-    const discountAmount =
-      typeof payload.discountAmount === 'number' ? payload.discountAmount : existing.discountAmount || 0;
+
+    let appliedDocs = existing.appliedCoupons || [];
+    let totalDiscountAmount = existing.discountAmount || 0;
+
+    if (payload.coupons || payload.vouchers) {
+      const coupons = payload.coupons || [];
+      const vouchers = payload.vouchers || [];
+      const result = await OrderService.calculateTotalDiscount({ coupons, vouchers, orderTotal: totalAmount });
+      appliedDocs = result.appliedDocs;
+      totalDiscountAmount = result.totalDiscountAmount;
+    }
+
     const shippingFee = typeof payload.shippingFee === 'number' ? payload.shippingFee : existing.shippingFee || 0;
 
     const updateDoc = {
       ...payload,
       items: orderItems,
-      appliedCoupons,
+      appliedCoupons: appliedDocs,
       totalAmount,
-      grandTotal: Math.max(0, totalAmount - discountAmount + shippingFee),
+      discountAmount: totalDiscountAmount,
+      grandTotal: Math.max(0, totalAmount - totalDiscountAmount + shippingFee),
       payment: payload.payment ? { ...existing.payment, ...payload.payment } : existing.payment,
     };
 
