@@ -215,13 +215,49 @@ const OrderSchema = new Schema(
       ],
       default: [],
     },
+
+    deliveryTime: {
+      type: new Schema(
+        {
+          option: {
+            type: String,
+            enum: ['immediate', 'scheduled'],
+            default: 'immediate',
+            required: true,
+          },
+          scheduledAt: { type: Date, default: null },
+        },
+        { _id: false }
+      ),
+      default: { option: 'immediate', scheduledAt: null },
+    },
+
+    priorityTime: {
+      type: Date,
+      index: true, // ✅ Đánh index để sort siêu nhanh
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
-/* ============================================================
- * Auto-Increment orderId
- * ============================================================ */
+OrderSchema.pre('validate', function (next) {
+  // Chỉ tính toán khi tạo mới hoặc khi field deliveryTime thay đổi
+  if (this.isNew || this.isModified('deliveryTime')) {
+    const deliveryOption = this.deliveryTime?.option;
+    const scheduledAt = this.deliveryTime?.scheduledAt;
+
+    if (deliveryOption === 'scheduled' && scheduledAt) {
+      // Nếu là đơn đặt lịch -> Lấy giờ hẹn
+      this.priorityTime = scheduledAt;
+    } else {
+      // Nếu là giao ngay -> Lấy giờ hiện tại (vì createdAt có thể chưa sinh ra lúc validate)
+      this.priorityTime = this.createdAt || new Date();
+    }
+  }
+  next();
+});
+
 OrderSchema.pre('save', async function (next) {
   if (!this.isNew) return next();
 
@@ -233,6 +269,60 @@ OrderSchema.pre('save', async function (next) {
     );
 
     this.orderId = counter.sequenceValue;
+
+    if (this.isModified('deliveryTime') || this.isNew) {
+      if (this.deliveryTime.option === 'scheduled' && this.deliveryTime.scheduledAt) {
+        this.priorityTime = this.deliveryTime.scheduledAt;
+      } else {
+        // Nếu là immediate, dùng createdAt.
+        // Lưu ý: Khi tạo mới (isNew), createdAt có thể chưa tồn tại, dùng new Date()
+        this.priorityTime = this.createdAt || new Date();
+      }
+    }
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ============================================================
+ * Hook: Tự động tính priorityTime khi UPDATE
+ * Áp dụng cho: updateOne, findOneAndUpdate, findByIdAndUpdate
+ * ============================================================ */
+OrderSchema.pre(['updateOne', 'findOneAndUpdate'], async function (next) {
+  try {
+    // 1. Lấy dữ liệu chuẩn bị update
+    const update = this.getUpdate();
+
+    // 2. Kiểm tra xem người dùng có đang sửa 'deliveryTime' không?
+    // Mongoose có thể để update dưới dạng { deliveryTime: ... } hoặc { $set: { deliveryTime: ... } }
+    const deliveryTimeUpdate = update.deliveryTime || (update.$set && update.$set.deliveryTime);
+
+    // Nếu không sửa deliveryTime thì bỏ qua, không cần tính lại
+    if (!deliveryTimeUpdate) {
+      return next();
+    }
+
+    let newPriorityTime;
+
+    // 3. Logic tính toán
+    if (deliveryTimeUpdate.option === 'scheduled' && deliveryTimeUpdate.scheduledAt) {
+      // Trường hợp 1: Đổi sang Scheduled -> Lấy giờ đặt lịch
+      newPriorityTime = deliveryTimeUpdate.scheduledAt;
+    } else {
+      // Trường hợp 2: Đổi sang Immediate -> Phải lấy lại createdAt của đơn gốc
+      // Vì 'this' ở đây là Query, không phải Document, nên phải query ngược lại DB để lấy createdAt
+      const docToUpdate = await this.model.findOne(this.getQuery());
+
+      // Nếu tìm thấy doc thì dùng createdAt cũ, nếu không (hiếm) thì dùng giờ hiện tại
+      newPriorityTime = docToUpdate ? docToUpdate.createdAt : new Date();
+    }
+
+    // 4. Gán ngược priorityTime vào payload update
+    // Sử dụng this.set() để đảm bảo Mongoose merge đúng vào operator $set
+    this.set({ priorityTime: newPriorityTime });
+
     next();
   } catch (err) {
     next(err);

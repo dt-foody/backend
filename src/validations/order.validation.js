@@ -55,7 +55,7 @@ const createOrderItemSchema = Joi.object({
   options: Joi.when('itemType', {
     is: 'Product',
     then: frontendOptionsSchema.required(),
-    otherwise: Joi.allow(null), // ✅ ĐÃ SỬA TẠI ĐÂY
+    otherwise: Joi.allow(null),
   }),
 
   // COMBO SELECTIONS
@@ -65,12 +65,11 @@ const createOrderItemSchema = Joi.object({
     otherwise: Joi.allow(null),
   }),
 
-  // ignore it
   comboSnapshot: Joi.any().strip(),
 });
 
 /* ============================================================
- * 4️⃣ SUB-SCHEMA: PAYMENT + COUPON + SHIPPING
+ * 4️⃣ SUB-SCHEMA: PAYMENT + COUPON + SHIPPING + DELIVERY TIME
  * ============================================================ */
 const paymentSchema = Joi.object({
   method: Joi.string().valid('cash', 'payos', 'momo', 'vnpay', 'bank_transfer').default('cash'),
@@ -98,10 +97,23 @@ const shippingSchema = Joi.object({
     city: Joi.string().required(),
     location: Joi.object({
       type: Joi.string().valid('Point').default('Point'),
-      coordinates: Joi.array(), // .items(Joi.number()).length(2), // [lng, lat]
+      coordinates: Joi.array(),
     }).optional(),
   }).required(),
   status: Joi.string().valid('pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled').default('pending'),
+});
+
+// 🔥 [MỚI] SCHEMA CHO DELIVERY TIME
+const deliveryTimeSchema = Joi.object({
+  option: Joi.string().valid('immediate', 'scheduled').default('immediate'),
+  scheduledAt: Joi.date()
+    .iso()
+    .allow(null)
+    .when('option', {
+      is: 'scheduled',
+      then: Joi.required(), // Nếu chọn scheduled thì bắt buộc có ngày
+      otherwise: Joi.allow(null),
+    }),
 });
 
 /* ============================================================
@@ -120,6 +132,9 @@ const customerOrder = {
 
     payment: paymentSchema.required(),
     shipping: shippingSchema.allow(null),
+
+    // 🔥 [MỚI] Thêm validation deliveryTime
+    deliveryTime: deliveryTimeSchema.optional(),
 
     note: Joi.string().allow('', null).default(''),
     orderType: Joi.string().allow('', null).default(''),
@@ -144,6 +159,9 @@ const adminPanelCreateOrder = {
     payment: paymentSchema.required(),
     shipping: shippingSchema.allow(null),
 
+    // 🔥 [MỚI] Thêm validation deliveryTime
+    deliveryTime: deliveryTimeSchema.optional(),
+
     note: Joi.string().allow('', null).default(''),
     orderType: Joi.string().allow('', null).default(''),
     channel: Joi.string().allow('', null).default(''),
@@ -156,7 +174,6 @@ const adminPanelUpdateOrder = {
   }),
 
   body: Joi.object({
-    // Cho phép đổi / hoặc giữ nguyên
     profile: Joi.string().custom(objectId).allow(null),
     profileType: Joi.string().valid('Customer', 'Employee').allow(null),
 
@@ -171,27 +188,23 @@ const adminPanelUpdateOrder = {
       'refunded'
     ),
 
-    // ✅ items: OPTIONAL, nhưng nếu có thì phải >= 1
     items: Joi.array().items(createOrderItemSchema).min(1),
-
-    // ✅ KHÔNG default([]), để phân biệt “không gửi” vs “gửi mảng rỗng”
     appliedCoupons: Joi.array().items(appliedCouponSchema),
 
-    // ✅ Cho phép override discount / shipping, nếu không gửi thì dùng existing
     discountAmount: Joi.number().min(0),
     shippingFee: Joi.number().min(0),
 
-    // ✅ payment / shipping đều OPTIONAL, để mode meta-only không bắt buộc gửi
     payment: paymentSchema,
     shipping: shippingSchema.allow(null),
+
+    // 🔥 [MỚI] Cho phép Admin update deliveryTime
+    deliveryTime: deliveryTimeSchema,
 
     note: Joi.string().allow('', null),
     orderType: Joi.string().allow('', null),
     channel: Joi.string().allow('', null),
-  }).min(1), // Bắt buộc phải có ít nhất 1 field để update
+  }).min(1),
 };
-
-// ... (Các schema khác giữ nguyên) ...
 
 /* ============================================================
  * 5️⃣ VALIDATION: CREATE ORDER (POS / ADMIN)
@@ -223,6 +236,9 @@ const create = {
     }),
 
     shipping: shippingSchema.allow(null),
+
+    // 🔥 [MỚI] Thêm validation deliveryTime
+    deliveryTime: deliveryTimeSchema.optional(),
 
     status: Joi.string()
       .valid('pending', 'confirmed', 'preparing', 'ready', 'delivering', 'completed', 'canceled', 'refunded')
@@ -281,7 +297,7 @@ const getByOrderId = {
 };
 
 /* ============================================================
- * 9️⃣ VALIDATION: UPDATE ORDER
+ * 9️⃣ VALIDATION: UPDATE ORDER (Legacy/General Update)
  * ============================================================ */
 const updateById = {
   params: Joi.object({
@@ -308,6 +324,10 @@ const updateById = {
 
     payment: paymentSchema,
     shipping: shippingSchema.allow(null),
+
+    // 🔥 [MỚI] Thêm vào hàm update chung (nếu dùng)
+    deliveryTime: deliveryTimeSchema,
+
     note: Joi.string().allow('', null),
     orderType: Joi.string(),
     channel: Joi.string(),
@@ -318,7 +338,7 @@ const updateById = {
 };
 
 /* ============================================================
- * 🔟 VALIDATION: DELETE
+ * 🔟 VALIDATION: DELETE & OTHERS
  * ============================================================ */
 const deleteById = {
   params: Joi.object({
@@ -340,9 +360,6 @@ const getShippingFee = {
   }),
 };
 
-/* ============================================================
- * EXPORT
- * ============================================================ */
 module.exports = {
   create,
   customerOrder,
