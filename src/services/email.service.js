@@ -77,7 +77,7 @@ const sendResetPasswordEmail = async (to, token) => {
               </p>
               
               <p style="margin:0 0 24px;color:#546e7a;font-size:15px;line-height:1.7;">
-                Có vẻ như bạn đã quên mật khẩu cho tài khoản <strong>${userEmail}</strong> tại Foody. 
+                Có vẻ như bạn đã quên mật khẩu cho tài khoản <strong>${userEmail}</strong> tại Lưu Chi. 
                 Đừng lo lắng, bạn có thể thiết lập lại mật khẩu mới bằng cách nhấn vào nút bên dưới.
               </p>
 
@@ -123,12 +123,12 @@ const sendResetPasswordEmail = async (to, token) => {
             <td style="background:#f8f9fa;padding:32px;text-align:center;border-top:1px solid #e9ecef;">
               <p style="margin:0 0 16px;color:#2c3e50;font-size:15px;font-weight:600;">
                 Trân trọng,<br>
-                <span style="color:#FF6B35;">Đội ngũ Foody</span>
+                <span style="color:#FF6B35;">Đội ngũ Lưu Chi</span>
               </p>
               
               <div style="margin:20px 0;padding-top:20px;border-top:1px solid #dee2e6;">
                 <p style="margin:0 0 8px;color:#78909c;font-size:12px;">
-                  © 2024 Foody Vietnam. All rights reserved.
+                  © 2025 Lưu Chi
                 </p>
                 <p style="margin:0;color:#90a4ae;font-size:11px;line-height:1.6;">
                   Đây là email tự động, vui lòng không trả lời email này.<br>
@@ -193,7 +193,7 @@ const sendVerificationEmail = async (to, token) => {
               </p>
               
               <p style="margin:0 0 24px;color:#546e7a;font-size:15px;line-height:1.7;">
-                Cảm ơn bạn đã đăng ký tài khoản tại <strong style="color:#FF6B35;">Foody</strong>! 
+                Cảm ơn bạn đã đăng ký tài khoản tại <strong style="color:#FF6B35;">Lưu Chi</strong>! 
                 Chúng tôi rất vui mừng được đồng hành cùng bạn trong hành trình khám phá ẩm thực.
               </p>
 
@@ -239,7 +239,7 @@ const sendVerificationEmail = async (to, token) => {
 
               <div style="margin:32px 0;">
                 <h3 style="margin:0 0 20px;color:#2c3e50;font-size:18px;font-weight:700;">
-                  Khám phá với Foody
+                  Khám phá với Lưu Chi
                 </h3>
                 <table role="presentation" style="width:100%;">
                   <tr>
@@ -296,7 +296,7 @@ const sendVerificationEmail = async (to, token) => {
             <td style="background:#f8f9fa;padding:32px;text-align:center;border-top:1px solid #e9ecef;">
               <p style="margin:0 0 16px;color:#2c3e50;font-size:15px;font-weight:600;">
                 Trân trọng,<br>
-                <span style="color:#FF6B35;">Đội ngũ Foody</span>
+                <span style="color:#FF6B35;margin-top:4px;">Đội ngũ Lưu Chi</span>
               </p>
               
               <div style="margin:24px 0;">
@@ -316,7 +316,7 @@ const sendVerificationEmail = async (to, token) => {
 
               <div style="margin:20px 0;padding-top:20px;border-top:1px solid #dee2e6;">
                 <p style="margin:0 0 8px;color:#78909c;font-size:12px;">
-                  © 2024 Foody Vietnam. All rights reserved.
+                  © 2025 Lưu Chi
                 </p>
                 <p style="margin:0;color:#90a4ae;font-size:11px;line-height:1.6;">
                   Đây là email tự động, vui lòng không trả lời email này.<br>
