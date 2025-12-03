@@ -85,7 +85,7 @@ if (config.env === 'production') {
 app.use('/v1', routesPublic);
 app.use('/v1/admin', routes);
 app.use(
-  '/public',
+  '/storage',
   express.static(path.join(__dirname, '../public'), {
     maxAge: '1d',
     immutable: true,
