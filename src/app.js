@@ -86,7 +86,7 @@ app.use('/v1', routesPublic);
 app.use('/v1/admin', routes);
 app.use(
   '/storage',
-  express.static(path.join(__dirname, '../public'), {
+  express.static(path.join(__dirname, '../storage'), {
     maxAge: '1d',
     immutable: true,
   })

@@ -5,8 +5,8 @@ const fs = require('fs');
 
 const router = express.Router();
 
-// 🧱 Tạo folder public nếu chưa có
-const uploadDir = path.join(__dirname, '../../../public');
+// 🧱 Tạo folder storage nếu chưa có
+const uploadDir = path.join(__dirname, '../../../storage');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 
 // ⚙️ Cấu hình multer
@@ -27,8 +27,8 @@ const upload = multer({ storage });
 router.post('/upload', upload.single('file'), (req, res) => {
   if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
-  // Trả về đường dẫn public
-  const fileUrl = `/public/${req.file.filename}`;
+  // Trả về đường dẫn storage
+  const fileUrl = `/storage/${req.file.filename}`;
   res.json({
     message: 'Upload successful',
     url: fileUrl,
