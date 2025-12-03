@@ -1,3 +1,4 @@
+// fileName: src/services/email.service.js
 const nodemailer = require('nodemailer');
 const config = require('../config/config');
 const logger = require('../config/logger');
@@ -16,6 +17,7 @@ if (config.env !== 'test') {
  * @param {string} to
  * @param {string} subject
  * @param {string} text
+ * @param {string} html
  * @returns {Promise}
  */
 const sendEmail = async (to, subject, text, html) => {
@@ -24,7 +26,7 @@ const sendEmail = async (to, subject, text, html) => {
     to,
     subject,
     text, // có thể null nếu dùng html
-    html, // thêm dòng này
+    html,
   };
 
   await transport.sendMail(msg);
@@ -37,13 +39,112 @@ const sendEmail = async (to, subject, text, html) => {
  * @returns {Promise}
  */
 const sendResetPasswordEmail = async (to, token) => {
-  const subject = 'Reset password';
-  // replace this url with the link to the reset password page of your front-end app
+  const subject = 'Đặt lại mật khẩu — Lưu Chi Coffee';
   const resetPasswordUrl = `https://luuchi.com.vn/en/forgot-password?token=${token}`;
-  const text = `Dear user,
-To reset your password, click on this link: ${resetPasswordUrl}
-If you did not request any password resets, then ignore this email.`;
-  await sendEmail(to, subject, text);
+  const userEmail = to;
+
+  const html = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f5f7fa;">
+    <tr>
+      <td align="center" style="padding:40px 20px;">
+        <table role="presentation" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);overflow:hidden;">
+          
+          <tr>
+            <td style="background:linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);padding:40px 32px;text-align:center;">
+              <div style="background:#fff;width:80px;height:80px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,0.15);">
+                <span style="font-size:40px;">🔐</span>
+              </div>
+              <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">
+                Yêu cầu đặt lại mật khẩu
+              </h1>
+              <p style="margin:12px 0 0;color:#ffffff;font-size:16px;opacity:0.95;">
+                Chúng tôi nhận được yêu cầu thay đổi mật khẩu từ bạn
+              </p>
+            </td>
+          </tr>
+          
+          <tr>
+            <td style="padding:40px 32px;">
+              <p style="margin:0 0 24px;color:#2c3e50;font-size:16px;line-height:1.6;">
+                Xin chào,
+              </p>
+              
+              <p style="margin:0 0 24px;color:#546e7a;font-size:15px;line-height:1.7;">
+                Có vẻ như bạn đã quên mật khẩu cho tài khoản <strong>${userEmail}</strong> tại Foody. 
+                Đừng lo lắng, bạn có thể thiết lập lại mật khẩu mới bằng cách nhấn vào nút bên dưới.
+              </p>
+
+              <table role="presentation" style="width:100%;margin:32px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${resetPasswordUrl}" 
+                       style="display:inline-block;background:linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);color:#ffffff;
+                              padding:16px 48px;border-radius:8px;text-decoration:none;font-weight:600;
+                              font-size:16px;box-shadow:0 4px 12px rgba(255,107,53,0.3);
+                              transition:all 0.3s ease;">
+                      Đặt lại mật khẩu
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" style="width:100%;border-collapse:collapse;background:#fff3e0;border-radius:12px;margin:24px 0;">
+                <tr>
+                  <td style="padding:20px;">
+                    <div style="display:flex;align-items:flex-start;">
+                      <span style="font-size:20px;margin-right:12px;">⚠️</span>
+                      <div>
+                        <p style="margin:0 0 8px;color:#e65100;font-size:14px;font-weight:700;">
+                          Bạn không yêu cầu thay đổi?
+                        </p>
+                        <p style="margin:0;color:#ef6c00;font-size:13px;line-height:1.5;">
+                          Nếu bạn không thực hiện yêu cầu này, hãy bỏ qua email. Mật khẩu của bạn sẽ không thay đổi và tài khoản của bạn vẫn an toàn.
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin:24px 0 0;color:#78909c;font-size:14px;line-height:1.6;">
+                Link đặt lại mật khẩu này chỉ có hiệu lực trong vòng ${config.jwt.resetPasswordExpirationMinutes} phút.
+              </p>
+            </td>
+          </tr>
+          
+          <tr>
+            <td style="background:#f8f9fa;padding:32px;text-align:center;border-top:1px solid #e9ecef;">
+              <p style="margin:0 0 16px;color:#2c3e50;font-size:15px;font-weight:600;">
+                Trân trọng,<br>
+                <span style="color:#FF6B35;">Đội ngũ Foody</span>
+              </p>
+              
+              <div style="margin:20px 0;padding-top:20px;border-top:1px solid #dee2e6;">
+                <p style="margin:0 0 8px;color:#78909c;font-size:12px;">
+                  © 2024 Foody Vietnam. All rights reserved.
+                </p>
+                <p style="margin:0;color:#90a4ae;font-size:11px;line-height:1.6;">
+                  Đây là email tự động, vui lòng không trả lời email này.<br>
+                  Nếu cần hỗ trợ, liên hệ: <a href="mailto:support@foody.vn" style="color:#FF6B35;text-decoration:none;">support@foody.vn</a>
+                </p>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+  await sendEmail(to, subject, null, html);
 };
 
 /**
@@ -69,10 +170,8 @@ const sendVerificationEmail = async (to, token) => {
   <table role="presentation" style="width:100%;border-collapse:collapse;background-color:#f5f7fa;">
     <tr>
       <td align="center" style="padding:40px 20px;">
-        <!-- Container chính -->
         <table role="presentation" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,0.08);overflow:hidden;">
           
-          <!-- Header với gradient -->
           <tr>
             <td style="background:linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);padding:40px 32px;text-align:center;">
               <div style="background:#fff;width:80px;height:80px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,0.15);">
@@ -87,7 +186,6 @@ const sendVerificationEmail = async (to, token) => {
             </td>
           </tr>
           
-          <!-- Nội dung chính -->
           <tr>
             <td style="padding:40px 32px;">
               <p style="margin:0 0 24px;color:#2c3e50;font-size:16px;line-height:1.6;">
@@ -99,7 +197,6 @@ const sendVerificationEmail = async (to, token) => {
                 Chúng tôi rất vui mừng được đồng hành cùng bạn trong hành trình khám phá ẩm thực.
               </p>
 
-              <!-- Box thông tin tài khoản -->
               <table role="presentation" style="width:100%;border-collapse:collapse;background:#f8f9fa;border-radius:12px;margin:24px 0;">
                 <tr>
                   <td style="padding:24px;">
@@ -126,7 +223,6 @@ const sendVerificationEmail = async (to, token) => {
                 Để bắt đầu sử dụng, vui lòng xác thực địa chỉ email của bạn bằng cách nhấn vào nút bên dưới:
               </p>
 
-              <!-- Button CTA -->
               <table role="presentation" style="width:100%;margin:32px 0;">
                 <tr>
                   <td align="center">
@@ -141,7 +237,6 @@ const sendVerificationEmail = async (to, token) => {
                 </tr>
               </table>
 
-              <!-- Tính năng nổi bật -->
               <div style="margin:32px 0;">
                 <h3 style="margin:0 0 20px;color:#2c3e50;font-size:18px;font-weight:700;">
                   Khám phá với Foody
@@ -197,7 +292,6 @@ const sendVerificationEmail = async (to, token) => {
             </td>
           </tr>
           
-          <!-- Footer -->
           <tr>
             <td style="background:#f8f9fa;padding:32px;text-align:center;border-top:1px solid #e9ecef;">
               <p style="margin:0 0 16px;color:#2c3e50;font-size:15px;font-weight:600;">
@@ -205,7 +299,6 @@ const sendVerificationEmail = async (to, token) => {
                 <span style="color:#FF6B35;">Đội ngũ Foody</span>
               </p>
               
-              <!-- Social Links -->
               <div style="margin:24px 0;">
                 <a href="#" style="display:inline-block;margin:0 8px;text-decoration:none;">
                   <span style="display:inline-block;width:36px;height:36px;background:#4267B2;border-radius:50%;
