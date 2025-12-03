@@ -39,7 +39,7 @@ const sendEmail = async (to, subject, text, html) => {
 const sendResetPasswordEmail = async (to, token) => {
   const subject = 'Reset password';
   // replace this url with the link to the reset password page of your front-end app
-  const resetPasswordUrl = `https://luuchi.vercel.app/en/forgot-password?token=${token}`;
+  const resetPasswordUrl = `https://luuchi.com.vn/en/forgot-password?token=${token}`;
   const text = `Dear user,
 To reset your password, click on this link: ${resetPasswordUrl}
 If you did not request any password resets, then ignore this email.`;
@@ -53,8 +53,8 @@ If you did not request any password resets, then ignore this email.`;
  * @returns {Promise}
  */
 const sendVerificationEmail = async (to, token) => {
-  const subject = 'Verify Your Email Address — MyCompany';
-  const verificationEmailUrl = `https://luuchi.vercel.app/en/verify-email?token=${token}`;
+  const subject = 'Xác minh địa chỉ email của bạn — Lưu Chi Coffee';
+  const verificationEmailUrl = `https://luuchi.com.vn/en/verify-email?token=${token}`;
   const userName = to;
   const userEmail = to;
 
@@ -79,7 +79,7 @@ const sendVerificationEmail = async (to, token) => {
                 <span style="font-size:40px;">🍜</span>
               </div>
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">
-                Chào mừng đến với Foody!
+                Chào mừng đến với Lưu Chi!
               </h1>
               <p style="margin:12px 0 0;color:#ffffff;font-size:16px;opacity:0.95;">
                 Tài khoản của bạn đã được tạo thành công
