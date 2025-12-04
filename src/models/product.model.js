@@ -80,7 +80,7 @@ const ProductSchema = new Schema(
 
 // --- Index ---
 // Index để tối ưu tìm kiếm theo Category và đảm bảo tính duy nhất của tên trong Category
-ProductSchema.index({ category: 1, name: 1 }, { unique: true });
+ProductSchema.index({ category: 1, name: 1 });
 // Index cho tìm kiếm nhanh theo trạng thái và ưu tiên (dùng khi hiển thị menu)
 ProductSchema.index({ isActive: 1, priority: 1 });
 
