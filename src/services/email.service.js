@@ -175,7 +175,7 @@ const sendVerificationEmail = async (to, token) => {
           <tr>
             <td style="background:linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);padding:40px 32px;text-align:center;">
               <div style="background:#fff;width:80px;height:80px;border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,0.15);">
-                <span style="font-size:40px;">🍜</span>
+                <span style="font-size:45px; margin-top: 5px; width: 100%; height: 100%;">🍜</span>
               </div>
               <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:700;letter-spacing:-0.5px;">
                 Chào mừng đến với Lưu Chi!
