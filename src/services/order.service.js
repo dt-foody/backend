@@ -532,6 +532,9 @@ class OrderService extends BaseService {
       checkoutUrl: data.checkoutUrl || data.shortLink,
     };
   }
+  static findById(id) {
+    return this.model.findById(id);
+  }
 }
 
 module.exports = new OrderService();

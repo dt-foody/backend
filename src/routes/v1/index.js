@@ -18,6 +18,7 @@ const blogCategoryRoute = require('./blogCategory.route');
 const blogTagRoute = require('./blogTag.route');
 const voucherRoute = require('./voucher.route');
 const employeeRoute = require('./employee.route');
+const menuRoute = require('./menu.route');
 
 const router = express.Router();
 
@@ -89,6 +90,10 @@ const defaultRoutes = [
   {
     path: '/blog-tags',
     route: blogTagRoute,
+  },
+  {
+    path: '/menu',
+    route: menuRoute,
   },
 ];
 
