@@ -144,11 +144,11 @@ const create = {
   body: Joi.object({
     profile: Joi.string().custom(objectId).allow(null).default(null),
     profileType: Joi.string()
-      .valid('Customer', 'Employee')
+      .valid('Customer', 'Employee', null)
       .when('profile', {
         is: Joi.exist().not(null),
         then: Joi.required(),
-        otherwise: Joi.forbidden(),
+        otherwise: Joi.strip(),
       }),
 
     items: Joi.array().items(createOrderItemSchema).min(1).required(),
