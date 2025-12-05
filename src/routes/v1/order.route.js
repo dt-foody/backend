@@ -27,6 +27,14 @@ function create(req, res, next) {
 }
 
 function findById(req, res, next) {
+  req.options.populate = [
+    {
+      path: 'items.item',
+    },
+    {
+      path: 'profile',
+    },
+  ];
   next();
 }
 

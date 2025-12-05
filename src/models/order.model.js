@@ -42,7 +42,12 @@ const OrderItemSchema = new Schema(
     item: {
       type: Schema.Types.ObjectId,
       required: true,
-      refPath: 'itemType', // Trỏ tới Product hoặc Combo tuỳ value
+      ref(doc) {
+        if (doc && doc.itemType) {
+          return doc.itemType;
+        }
+        return 'Product';
+      },
     },
     itemType: {
       type: String,
