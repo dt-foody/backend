@@ -23,8 +23,8 @@ const register = catchAsync(async (req, res) => {
 });
 
 const login = catchAsync(async (req, res) => {
-  const { email, password } = req.body;
-  const user = await authService.login(email, password);
+  const { username, password } = req.body;
+  const user = await authService.login(username, password);
 
   // --- LOGIC MỚI: KIỂM TRA SUBDOMAIN VÀ ROLE ---
   const { hostname } = req;

@@ -87,8 +87,10 @@ const register = async (subdomain, userBody) => {
  * @param {string} password
  * @returns {Promise<User>}
  */
-const login = async (email, password) => {
-  const user = await userService.findOne({ email });
+const login = async (username, password) => {
+  const user = await userService.findOne({
+    $or: [{ email: username }, { phone: username }],
+  });
   if (!user || !(await user.isPasswordMatch(password))) {
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect email or password');
   }
