@@ -2,6 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 const { getPayOS } = require('../../../config/payos');
+const logger = require('../../../config/logger');
 const { PayOSWebhookLog } = require('../../../models'); // model log webhook
 const { orderService } = require('../../../services'); // model log webhook
 
@@ -25,18 +26,18 @@ router.post('/', async (req, res) => {
       reference: rawBody?.data?.reference,
     });
 
-    console.log('📩 PayOS Webhook Received:', rawBody);
+    logger.info('📩 PayOS Webhook Received:', rawBody);
 
     // 🔹 Xác thực chữ ký
     const verified = await payos.webhooks.verify(rawBody);
-    console.log('✅ Verified webhook data:', verified);
+    logger.info('✅ Verified webhook data:', verified);
 
     // 🔹 Nếu verify OK → update log
     await log.updateOne({ verified: true, status: 'verified' });
 
     // 🔹 Check mã code phản hồi
     if (verified.code !== '00') {
-      console.warn('⚠️ PayOS webhook code != 00:', verified.code);
+      logger.warn('⚠️ PayOS webhook code != 00:', verified.code);
       await log.updateOne({
         status: 'invalid',
         verifyError: `Webhook code ${verified.code}`,
@@ -49,7 +50,7 @@ router.post('/', async (req, res) => {
 
     // 🔹 Bỏ qua giao dịch test
     if (['Ma giao dich thu nghiem', 'VQRIO123'].includes(verified.data?.description)) {
-      console.log('ℹ️ Test transaction ignored');
+      logger.info('ℹ️ Test transaction ignored');
       return res.json({
         error: 0,
         message: 'Test transaction ignored',
@@ -62,7 +63,7 @@ router.post('/', async (req, res) => {
     // TODO: cập nhật trạng thái đơn hàng trong DB
     await orderService.updateOne({ orderCode }, { 'payment.status': 'paid', status: 'confirmed' });
 
-    console.log('💰 Payment success:', { orderCode, amount });
+    logger.info('💰 Payment success:', { orderCode, amount });
 
     await log.updateOne({
       status: 'processed',
@@ -75,7 +76,7 @@ router.post('/', async (req, res) => {
       data: verified,
     });
   } catch (err) {
-    console.error('❌ Webhook verify failed:', err);
+    logger.error('❌ Webhook verify failed:', err);
 
     // 🔹 Ghi log lỗi nếu có
     try {
@@ -89,7 +90,7 @@ router.post('/', async (req, res) => {
       /* ignore logging error */
     }
 
-    return res.status(400).json({
+    return res.status(200).json({
       error: -1,
       message: 'Invalid signature or verification failed',
     });

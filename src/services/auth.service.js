@@ -21,7 +21,7 @@ const register = async (subdomain, userBody) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
-  const { email, password } = userBody;
+  const { email, phone, password } = userBody;
   const isAdmin = subdomain === 'admin';
   const role = isAdmin ? 'admin' : 'customer';
 
@@ -31,6 +31,7 @@ const register = async (subdomain, userBody) => {
     // 2. Tạo User trước
     newUser = await userService.create({
       email,
+      phone,
       password,
       role,
       isEmailVerified: false,

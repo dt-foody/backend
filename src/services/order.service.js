@@ -374,7 +374,7 @@ class OrderService extends BaseService {
       const qr = await this.generatePayOSQR({
         amount: grandTotal,
         orderCode,
-        description: `Thanh toán đơn hàng #${orderCode}`,
+        description: `Order #${orderCode}`,
       });
       data.payment.transactionId = qr.transactionId;
       data.payment.qrCode = qr.qrCode;
