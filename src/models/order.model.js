@@ -156,6 +156,7 @@ const OrderSchema = new Schema(
       transactionId: { type: String, default: '' },
       checkoutUrl: { type: String, default: '' },
       qrCode: { type: String, default: '' },
+      message: { type: String, default: '' },
     },
 
     // Giao hàng (Địa chỉ)
