@@ -207,7 +207,7 @@ class MenuController {
     const flashSaleCategory =
       flashSaleItems.length > 0
         ? {
-            id: 'flash-sale',
+            id: 'flashsale',
             name: 'Flash Sale',
             priority: -999,
             products: flashSaleItems,
