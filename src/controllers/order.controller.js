@@ -19,9 +19,9 @@ class OrderController extends BaseController {
   async customerOrder(req, res) {
     const data = { ...req.body };
 
-    data.profileType = req.user.profileType;
-    data.profile = req.user.profile._id || req.user.profile.id;
-    data.createdBy = req.user._id || req.user.id;
+    data.profileType = req.user ? req.user.profileType : null;
+    data.profile = req.user && req.user.profile ? req.user.profile._id || req.user.profile.id || req.user.profile : null;
+    data.createdBy = req.user ? req.user._id || req.user.id : null;
 
     const result = await this.service.customerOrder(data);
     return res.status(OK).json(result);
