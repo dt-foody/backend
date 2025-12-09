@@ -89,7 +89,6 @@ const sendResetPasswordEmail = async (to, token) => {
   const payload = {
     // Header
     title: 'Yêu cầu đặt lại mật khẩu',
-    subtitle: 'Chúng tôi nhận được yêu cầu thay đổi mật khẩu từ bạn',
 
     // Body
     fullName: '', // nếu cần lấy từ database thì truyền từ ngoài
