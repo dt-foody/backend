@@ -4,6 +4,7 @@ const path = require('path');
 const handlebars = require('handlebars');
 const config = require('../config/config');
 const logger = require('../config/logger');
+const { User } = require('../models/index');
 
 const transport = nodemailer.createTransport(config.email.smtp);
 
@@ -82,20 +83,32 @@ const sendEmail = async (to, subject, text, html) => {
  * @returns {Promise}
  */
 const sendResetPasswordEmail = async (to, token) => {
-  const subject = 'Đặt lại mật khẩu — Lưu Chi Coffee';
+  const subject = 'Hỗ trợ đặt lại mật khẩu cho tài khoản Lưu Chi';
   const resetPasswordUrl = `https://luuchi.com.vn/vi/forgot-password?token=${token}`;
 
-  // Đọc file src/templates/email/reset-password.hbs
-  const html = await getTemplate('reset-password.hbs', {
-    // Dữ liệu cho Header
+  const payload = {
+    // Header
     title: 'Yêu cầu đặt lại mật khẩu',
     subtitle: 'Chúng tôi nhận được yêu cầu thay đổi mật khẩu từ bạn',
 
-    // Dữ liệu cho nội dung chính
+    // Body
+    fullName: '', // nếu cần lấy từ database thì truyền từ ngoài
     userEmail: to,
     resetPasswordUrl,
-    expirationMinutes: config.jwt.resetPasswordExpirationMinutes,
-  });
+
+    // Thời gian hiển thị thân thiện (optional)
+    expirationText: `${config.jwt.resetPasswordExpirationMinutes} phút`,
+  };
+
+  if (to) {
+    const user = await User.findOne({ email: to }).populate('profile');
+
+    if (user) {
+      payload.fullName = user.profile?.name;
+    }
+  }
+
+  const html = await getTemplate('reset-password.hbs', payload);
 
   await sendEmail(to, subject, null, html);
 };
