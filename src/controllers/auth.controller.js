@@ -16,7 +16,7 @@ const register = catchAsync(async (req, res) => {
   const user = await authService.register(subdomain, req.body);
 
   const verifyEmailToken = await tokenService.generateVerifyEmailToken(user);
-  await emailService.sendVerificationEmail(user.email, verifyEmailToken);
+  await emailService.sendVerificationEmail(req.body.name, user.email, verifyEmailToken);
 
   const tokens = await tokenService.generateAuthTokens(user);
   res.status(httpStatus.CREATED).send({ user, tokens });

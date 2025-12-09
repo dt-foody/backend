@@ -83,7 +83,7 @@ const sendEmail = async (to, subject, text, html) => {
  */
 const sendResetPasswordEmail = async (to, token) => {
   const subject = 'Đặt lại mật khẩu — Lưu Chi Coffee';
-  const resetPasswordUrl = `https://luuchi.com.vn/en/forgot-password?token=${token}`;
+  const resetPasswordUrl = `https://luuchi.com.vn/vi/forgot-password?token=${token}`;
 
   // Đọc file src/templates/email/reset-password.hbs
   const html = await getTemplate('reset-password.hbs', {
@@ -106,10 +106,10 @@ const sendResetPasswordEmail = async (to, token) => {
  * @param {string} token
  * @returns {Promise}
  */
-const sendVerificationEmail = async (to, token) => {
-  const subject = 'Xác minh địa chỉ email của bạn — Lưu Chi Coffee';
-  const verificationEmailUrl = `https://luuchi.com.vn/en/verify-email?token=${token}`;
-  const userName = to.split('@')[0]; // Lấy tên từ email nếu chưa có tên thật
+const sendVerificationEmail = async (profileName, to, token) => {
+  const subject = 'Lưu Chi gửi bạn món quà chào mừng đầu tiên!';
+  const verificationEmailUrl = `https://luuchi.com.vn/vi/verify-email?token=${token}`;
+  // const userName = to.split('@')[0]; // Lấy tên từ email nếu chưa có tên thật
 
   // Đọc file src/templates/email/verification.hbs
   const html = await getTemplate('verification.hbs', {
@@ -118,7 +118,7 @@ const sendVerificationEmail = async (to, token) => {
     subtitle: 'Tài khoản của bạn đã được tạo thành công!',
 
     // Dữ liệu cho nội dung chính
-    userName,
+    profileName,
     userEmail: to,
     verificationEmailUrl,
     createdDate: new Date().toLocaleDateString('vi-VN'),
