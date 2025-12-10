@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 const { toJSON, paginate } = require('./plugins/index');
@@ -15,12 +16,13 @@ const BlogPostSchema = new Schema(
     },
     slug: {
       type: String,
-      unique: true,
       index: true,
+      trim: true,
     },
     summary: {
       type: String,
       trim: true,
+      default: '',
     },
     content: {
       type: String, // HTML hoặc Markdown
@@ -85,20 +87,57 @@ const BlogPostSchema = new Schema(
 // --- 2. Hooks ---
 //
 
-// Tự động sinh slug nếu chưa có
-BlogPostSchema.pre('validate', function (next) {
-  if (!this.slug && this.title) {
-    this.slug = slugify(this.title, { lower: true, strict: true });
-  }
-  next();
-});
+/**
+ * Hàm đệ quy tạo slug duy nhất
+ * Ví dụ: "hello-world" -> "hello-world-1" -> "hello-world-2"
+ */
+async function generateUniqueSlug(title, model, _id = null) {
+  const baseSlug = slugify(title, { lower: true, strict: true, locale: 'vi' });
+  let uniqueSlug = baseSlug;
+  let counter = 1;
 
-// Ghi lại thời gian xuất bản
-BlogPostSchema.pre('save', function (next) {
-  if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
-    this.publishedAt = new Date();
+  while (true) {
+    // Tìm xem slug này đã tồn tại chưa (loại trừ chính document hiện tại nếu đang update)
+    const existing = await model
+      .findOne({
+        slug: uniqueSlug,
+        _id: { $ne: _id }, // Quan trọng: không check trùng với chính nó
+      })
+      .select('_id');
+
+    if (!existing) {
+      return uniqueSlug; // Chưa tồn tại -> Dùng được
+    }
+
+    // Đã tồn tại -> Thêm số vào đuôi và check lại
+    uniqueSlug = `${baseSlug}-${counter}`;
+    counter += 1;
   }
-  next();
+}
+
+BlogPostSchema.pre('save', async function (next) {
+  try {
+    // 1. Xử lý Slug
+    // Chỉ tạo slug nếu:
+    // - Document mới tinh
+    // - Hoặc Title thay đổi VÀ bài viết chưa Public (để tránh mất SEO)
+    // - Hoặc user cố tình set slug rỗng để regenerate
+    const isTitleChanged = this.isModified('title');
+    const isPublished = this.status === 'published';
+
+    if ((this.isNew && !this.slug) || (isTitleChanged && !isPublished)) {
+      this.slug = await generateUniqueSlug(this.title, this.constructor, this._id);
+    }
+
+    // 2. Xử lý Published Date
+    if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
+      this.publishedAt = new Date();
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 //
@@ -109,10 +148,6 @@ BlogPostSchema.pre('save', function (next) {
 BlogPostSchema.index({ status: 1, publishedAt: -1 });
 // Lọc bài viết theo category
 BlogPostSchema.index({ categories: 1, status: 1 });
-// Lọc bài viết theo tags
-BlogPostSchema.index({ tags: 1, status: 1 });
-// Lọc featured / pinned
-BlogPostSchema.index({ isFeatured: 1, isPinned: 1 });
 
 //
 // --- 4. Plugins ---
