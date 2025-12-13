@@ -96,6 +96,13 @@ const deliveryTimeSchema = Joi.object({
       then: Joi.required(),
       otherwise: Joi.allow(null),
     }),
+  timeSlot: Joi.string()
+    .allow(null)
+    .when('option', {
+      is: 'scheduled',
+      then: Joi.required(),
+      otherwise: Joi.allow(null),
+    }),
 });
 
 /* ============================================================
