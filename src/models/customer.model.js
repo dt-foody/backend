@@ -81,6 +81,7 @@ const CustomerSchema = new Schema(
     // isNew: {type: Boolean, default: true },
     lastOrderDate: { type: Date },
     totalOrder: { type: Number, default: 0 },
+    totalSpent: { type: Number, default: 0 },
 
     // --- NGHIỆP VỤ ---
     // orderHistory: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
