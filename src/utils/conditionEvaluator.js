@@ -12,16 +12,16 @@ const logger = require('../config/logger');
 const RESOLVER_DEFS = {
   // --- CUSTOMER INFO ---
   customer_name: {
-    fn: (context) => context.customer?.name || '',
+    fn: (context) => context?.user?.profile?.name || '',
     isUserDependent: true,
   },
   customer_gender: {
-    fn: (context) => context.customer?.gender || '',
+    fn: (context) => context?.user?.profile?.gender || '',
     isUserDependent: true,
   },
   customer_age: {
     fn: (context) => {
-      const dob = context.customer?.birthDate;
+      const dob = context?.user?.profile?.birthDate;
       if (!dob) return null; // Trả về null để Operator biết là không có dữ liệu
       const birth = new Date(dob);
       const diff = Date.now() - birth.getTime();
@@ -31,7 +31,7 @@ const RESOLVER_DEFS = {
   },
   customer_birth_month: {
     fn: (context) => {
-      const dob = context.customer?.birthDate;
+      const dob = context?.user?.profile?.birthDate;
       if (!dob) return null;
       return new Date(dob).getMonth() + 1;
     },
@@ -39,21 +39,21 @@ const RESOLVER_DEFS = {
   },
   customer_birth_year: {
     fn: (context) => {
-      const dob = context.customer?.birthDate;
+      const dob = context?.user?.profile?.birthDate;
       if (!dob) return null;
       return new Date(dob).getFullYear();
     },
     isUserDependent: true,
   },
   customer_order_count: {
-    fn: (context) => context.customer?.totalOrder || 0,
+    fn: (context) => context?.user?.profile?.totalOrder || 0,
     isUserDependent: true,
   },
 
   // --- ORDER CONTEXT ---
   order_total_items: {
     fn: (context) => {
-      const items = context.order?.items;
+      const items = context?.user?.order?.items;
       if (!items?.length) return 0;
       return items.reduce((sum, it) => sum + (it.quantity || 0), 0);
     },
@@ -97,6 +97,15 @@ const OPERATORS = {
           .split(',')
           .map((i) => i.trim());
     return list.includes(String(a));
+  },
+
+  NOT_IN: (a, b) => {
+    const list = Array.isArray(b)
+      ? b
+      : String(b)
+          .split(',')
+          .map((i) => i.trim());
+    return !list.includes(String(a));
   },
 };
 
