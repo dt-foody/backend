@@ -120,7 +120,7 @@ class MenuController {
       }
     }
 
-    // 3. Process Products & Categories
+    // 3. Process Products & Categories (UPDATED LOGIC HERE)
     const categoryMap = new Map();
     const flashSaleItems = [];
 
@@ -130,32 +130,43 @@ class MenuController {
       const pObj = product.toObject(); // Plugin ensures pObj.id exists
       const productId = pObj.id.toString();
 
-      // Prepare Base Item Data
-      const itemData = {
+      // --- A. TẠO ITEM CHO DANH MỤC THƯỜNG (LUÔN LÀ GIÁ GỐC) ---
+      // Item này sẽ được push vào categoryMap bên dưới
+      const regularItem = {
         ...pObj,
         image: pObj.image ? `${IMAGE_PREFIX}${pObj.image}` : '',
-        salePrice: pObj.basePrice,
-        promotion: null,
+        salePrice: pObj.basePrice, // Cố định giá bán bằng giá gốc
+        promotion: null, // Không kèm thông tin promotion
       };
 
-      // Apply Promotion
+      // --- B. XỬ LÝ LOGIC FLASH SALE (TÁCH BIỆT) ---
       const promo = productPromoMap.get(productId);
       if (promo) {
-        itemData.salePrice = this.calculateSalePrice(itemData.basePrice, promo);
-        itemData.promotion = {
-          id: this.getItemId(promo).toString(), // Ensure ID string
-          name: promo.name,
-          discountType: promo.discountType,
-          discountValue: promo.discountValue,
-          maxDiscountAmount: promo.maxDiscountAmount || 0,
-        };
+        // Tính toán giá giảm thử nghiệm
+        const calculatedSalePrice = this.calculateSalePrice(regularItem.basePrice, promo);
 
-        if (itemData.salePrice < itemData.basePrice) {
-          flashSaleItems.push({ ...itemData, type: 'Product' });
+        // Nếu có giảm giá thật sự thì mới tạo object Flash Sale riêng
+        if (calculatedSalePrice < regularItem.basePrice) {
+          const flashSaleItem = {
+            ...regularItem, // Copy thông tin cơ bản
+            type: 'Product',
+            salePrice: calculatedSalePrice, // Áp dụng giá giảm
+            promotion: {
+              // Kèm thông tin khuyến mãi
+              id: this.getItemId(promo).toString(),
+              name: promo.name,
+              discountType: promo.discountType,
+              discountValue: promo.discountValue,
+              maxDiscountAmount: promo.maxDiscountAmount || 0,
+            },
+          };
+
+          // Push item đã giảm giá vào danh sách Flash Sale
+          flashSaleItems.push(flashSaleItem);
         }
       }
 
-      // Group by Category
+      // --- C. PUSH ITEM GIÁ GỐC VÀO DANH MỤC ---
       const catId = this.getItemId(product.category);
       if (!categoryMap.has(catId)) {
         categoryMap.set(catId, {
@@ -165,12 +176,14 @@ class MenuController {
           products: [],
         });
       }
-      categoryMap.get(catId).products.push(itemData);
+
+      // Quan trọng: Push regularItem (giá gốc), KHÔNG push flashSaleItem
+      categoryMap.get(catId).products.push(regularItem);
     }
 
     const regularCategories = Array.from(categoryMap.values()).sort((a, b) => a.priority - b.priority);
 
-    // 4. Process Combos
+    // 4. Process Combos (Giữ nguyên vì Combo được hiển thị ở section riêng)
     const processedCombos = combos.map((combo) => {
       const cObj = combo.toObject(); // Plugin ensures cObj.id exists
       const comboId = cObj.id.toString();
@@ -215,9 +228,9 @@ class MenuController {
         : null;
 
     res.status(OK).json({
-      flashSaleCategory,
-      thucDon: regularCategories,
-      combos: processedCombos,
+      flashSaleCategory, // Chứa các món (Sản phẩm & Combo) CÓ giảm giá
+      thucDon: regularCategories, // Chứa Sản phẩm GIÁ GỐC
+      combos: processedCombos, // Chứa Combo CÓ giảm giá (theo yêu cầu ban đầu)
     });
   }
 }
