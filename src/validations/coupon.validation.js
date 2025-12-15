@@ -34,7 +34,7 @@ const create = {
     })
     .when(Joi.object({ valueType: Joi.string().valid('percentage') }).unknown(), {
       then: Joi.object({
-        maxDiscountAmount: Joi.number().min(1).required(),
+        maxDiscountAmount: Joi.number().min(0).required(),
       }),
     }),
 };

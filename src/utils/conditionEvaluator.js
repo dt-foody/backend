@@ -50,6 +50,11 @@ const RESOLVER_DEFS = {
     isUserDependent: true,
   },
 
+  customer_total_spent: {
+    fn: (context) => context?.user?.profile?.totalSpent || 0,
+    isUserDependent: true,
+  },
+
   // --- ORDER CONTEXT ---
   order_total_items: {
     fn: (context) => {
@@ -58,6 +63,13 @@ const RESOLVER_DEFS = {
       return items.reduce((sum, it) => sum + (it.quantity || 0), 0);
     },
     isUserDependent: false, // Mặc định là false nếu không khai báo, nhưng ghi rõ cho dễ đọc
+  },
+
+  current_day_of_week: {
+    fn: () => {
+      return new Date().getDay(); // 0 (Chủ nhật) đến 6 (Thứ bảy)
+    },
+    isUserDependent: false,
   },
 };
 
@@ -92,7 +104,7 @@ const OPERATORS = {
   IN: (a, b) => {
     // Hỗ trợ b là chuỗi "A,B,C" hoặc mảng ["A", "B"]
     const list = Array.isArray(b)
-      ? b
+      ? b.map(String)
       : String(b)
           .split(',')
           .map((i) => i.trim());
@@ -101,7 +113,7 @@ const OPERATORS = {
 
   NOT_IN: (a, b) => {
     const list = Array.isArray(b)
-      ? b
+      ? b.map(String)
       : String(b)
           .split(',')
           .map((i) => i.trim());

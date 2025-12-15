@@ -1,6 +1,6 @@
 /* eslint-disable no-await-in-loop */
 const BaseService = require('../utils/_base.service');
-const { Order, Product, Combo, Coupon, PricePromotion, Voucher } = require('../models');
+const { Order, Product, Combo, Coupon, PricePromotion, Voucher, Customer, Employee } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 const logger = require('../config/logger');
@@ -474,6 +474,36 @@ class OrderService extends BaseService {
     };
   }
 
+  /* ============================================================
+   * 6. UPDATE PROFILE STATS (LOGIC MỚI)
+   * ============================================================ */
+  static async updateProfileStats(order) {
+    // Chỉ xử lý khi đơn hàng đã hoàn thành và có thông tin profile
+    if (order.status !== 'completed' || !order.profile || !order.profileType) {
+      return;
+    }
+
+    const updateData = {
+      $inc: {
+        totalOrder: 1,
+        totalSpent: order.grandTotal, // Cộng dồn tổng tiền thực trả của đơn hàng
+      },
+      $set: {
+        lastOrderDate: new Date(), // Cập nhật ngày đặt hàng gần nhất là hiện tại
+      },
+    };
+
+    try {
+      if (order.profileType === 'Customer') {
+        await Customer.findByIdAndUpdate(order.profile, updateData);
+      } else if (order.profileType === 'Employee') {
+        await Employee.findByIdAndUpdate(order.profile, updateData);
+      }
+    } catch (error) {
+      logger.error(`Failed to update profile stats for order ${order.orderCode}:`, error);
+    }
+  }
+
   async adminPanelCreateOrder(payload) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
     const order = await this.model.create(orderData);
@@ -514,6 +544,14 @@ class OrderService extends BaseService {
     };
 
     const order = await this.model.findByIdAndUpdate(id, updateDoc, { new: true });
+
+    // --- LOGIC MỚI THÊM VÀO ---
+    // Kiểm tra nếu trạng thái chuyển sang 'completed' (và trước đó chưa phải completed)
+    if (payload.status === 'completed' && existing.status !== 'completed') {
+      await OrderService.updateProfileStats(order);
+    }
+    // ---------------------------
+
     return { message: 'Admin đã cập nhật đơn thành công.', order };
   }
 
