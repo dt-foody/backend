@@ -189,7 +189,17 @@ const OrderSchema = new Schema(
 
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivering', 'completed', 'canceled', 'refunded'],
+      enum: [
+        'pending',
+        'confirmed',
+        'preparing',
+        'ready',
+        'waiting_for_driver',
+        'delivering',
+        'completed',
+        'canceled',
+        'refunded',
+      ],
       default: 'pending',
       index: true,
     },

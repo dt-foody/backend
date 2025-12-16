@@ -188,6 +188,7 @@ const adminPanelUpdateOrder = {
       'confirmed',
       'preparing',
       'ready',
+      'waiting_for_driver',
       'delivering',
       'completed',
       'canceled',
