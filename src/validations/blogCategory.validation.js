@@ -9,6 +9,7 @@ const create = {
     backgroundColor: Joi.string().allow(null, '').default('#E0E0E0'),
     textColor: Joi.string().allow(null, '').default('#212121'),
     isActive: Joi.boolean(),
+    priority: Joi.number().integer().min(0).default(0),
   }),
 };
 
@@ -42,6 +43,7 @@ const updateById = {
       isActive: Joi.boolean(),
       backgroundColor: Joi.string().allow(null, '').default('#E0E0E0'),
       textColor: Joi.string().allow(null, '').default('#212121'),
+      priority: Joi.number().integer().min(0),
     })
     .min(1),
 };

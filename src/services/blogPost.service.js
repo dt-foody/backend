@@ -38,6 +38,7 @@ class BlogPostService extends BaseService {
             categoryId: '$category._id',
             categoryName: '$category.name',
             categorySlug: '$category.slug',
+            priority: '$category.priority',
           },
           posts: {
             $push: {
@@ -57,11 +58,12 @@ class BlogPostService extends BaseService {
           _id: 0,
           category: '$_id.categoryName',
           categoryId: '$_id.categoryId',
+          priority: '$_id.priority',
           slug: '$_id.categorySlug',
           posts: { $slice: ['$posts', limit] },
         },
       },
-      { $sort: { category: 1 } },
+      { $sort: { priority: 1, category: 1 } },
     ];
 
     const result = await this.model.aggregate(pipeline);
