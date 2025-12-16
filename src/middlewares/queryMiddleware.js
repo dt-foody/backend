@@ -14,6 +14,7 @@ const queryMiddleware = (req, res, next) => {
   delete req.query.limit;
   delete req.query.sortBy;
   delete req.query.populate;
+  delete req.query.select;
 
   if (req.query.search) {
     req.query.search = req.query.search ? req.query.search.trim() : '';

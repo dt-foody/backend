@@ -35,6 +35,7 @@ const paginate = {
     isFeatured: Joi.boolean().allow('', null),
     isPinned: Joi.boolean().allow('', null),
     sortBy: Joi.string().allow('', null),
+    select: Joi.string().allow('', null),
     limit: Joi.number().integer().min(1),
     page: Joi.number().integer().min(1),
     populate: Joi.string().allow('', null),
