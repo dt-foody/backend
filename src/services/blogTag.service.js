@@ -53,11 +53,11 @@ class BlogTagService extends BaseService {
       {
         $lookup: {
           from: 'blogposts', // Tên collection trong DB (lưu ý: số nhiều, thường viết thường)
-          let: { catId: '$_id' },
+          let: { tagId: '$_id' },
           pipeline: [
             {
               $match: {
-                $expr: { $in: ['$$catId', '$categories'] }, // Logic tìm bài viết thuộc category này
+                $expr: { $in: ['$$tagId', '$tags'] }, // Logic tìm bài viết thuộc category này
                 isDeleted: false, // Chỉ đếm bài chưa xóa
                 status: 'published', // QUAN TRỌNG: Chỉ đếm bài đã xuất bản
               },
@@ -82,7 +82,21 @@ class BlogTagService extends BaseService {
       // Bước 5: Phân trang bằng Facet (Lấy data và count cùng lúc)
       {
         $facet: {
-          results: [{ $skip: skip }, { $limit: limit }],
+          results: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $addFields: {
+                id: { $toString: '$_id' }, // 1. Tạo field id từ _id
+              },
+            },
+            {
+              $project: {
+                _id: 0, // 2. Xóa field _id
+                __v: 0, // 3. Xóa field __v
+              },
+            },
+          ],
           totalCount: [{ $count: 'count' }],
         },
       },

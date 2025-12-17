@@ -82,7 +82,21 @@ class BlogCategoryService extends BaseService {
       // Bước 5: Phân trang bằng Facet (Lấy data và count cùng lúc)
       {
         $facet: {
-          results: [{ $skip: skip }, { $limit: limit }],
+          results: [
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $addFields: {
+                id: { $toString: '$_id' }, // 1. Tạo field id từ _id
+              },
+            },
+            {
+              $project: {
+                _id: 0, // 2. Xóa field _id
+                __v: 0, // 3. Xóa field __v
+              },
+            },
+          ],
           totalCount: [{ $count: 'count' }],
         },
       },
