@@ -15,12 +15,18 @@ class BlogPostService extends BaseService {
   async groupByCategory(query = {}) {
     const limit = query.limit || 2;
 
+    const conditions = {
+      isDeleted: false,
+      status: 'published',
+    };
+
+    if (query.displayPage) {
+      conditions.displayPages = query.displayPage;
+    }
+
     const pipeline = [
       {
-        $match: {
-          isDeleted: false,
-          status: 'published',
-        },
+        $match: conditions,
       },
       { $unwind: '$categories' },
       {

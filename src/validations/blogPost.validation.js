@@ -17,6 +17,8 @@ const create = {
     isFeatured: Joi.boolean().default(false),
     isPinned: Joi.boolean().default(false),
 
+    displayPages: Joi.array().items(Joi.string().valid('sharing', 'community')).default([]),
+
     seoTitle: Joi.string().allow('', null),
     seoDescription: Joi.string().allow('', null),
 
@@ -32,6 +34,7 @@ const paginate = {
     category: Joi.string().custom(objectId).allow('', null),
     tag: Joi.string().custom(objectId).allow('', null),
     status: Joi.string().valid('draft', 'published', 'archived').allow('', null),
+    displayPage: Joi.string().valid('sharing', 'community').allow('', null),
     isFeatured: Joi.boolean().allow('', null),
     isPinned: Joi.boolean().allow('', null),
     sortBy: Joi.string().allow('', null),
@@ -72,6 +75,8 @@ const updateById = {
       seoTitle: Joi.string().allow('', null),
       seoDescription: Joi.string().allow('', null),
       publishedAt: Joi.date().allow('', null),
+
+      displayPages: Joi.array().items(Joi.string().valid('sharing', 'community')),
     })
     .min(1),
 };

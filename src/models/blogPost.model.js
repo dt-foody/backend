@@ -74,6 +74,13 @@ const BlogPostSchema = new Schema(
     // --- Thống kê ---
     views: { type: Number, default: 0 },
 
+    // --- Hiển thị ở các trang nào ---
+    displayPages: {
+      type: [String],
+      enum: ['sharing', 'community'], // Giới hạn chỉ chấp nhận 2 giá trị này
+      default: [], // Mặc định là mảng rỗng (không hiển thị ở đâu)
+    },
+
     // --- Audit & Soft Delete ---
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     isDeleted: { type: Boolean, default: false },
