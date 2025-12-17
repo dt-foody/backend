@@ -16,3 +16,4 @@ module.exports.BlogPost = require('./blogPost.model');
 module.exports.BlogCategory = require('./blogCategory.model');
 module.exports.BlogTag = require('./blogTag.model');
 module.exports.PayOSWebhookLog = require('./payOSWebhookLog.model');
+module.exports.Surcharge = require('./surcharge.model');

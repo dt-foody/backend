@@ -25,6 +25,7 @@ const PERMISSIONS = {
   blogCategory: ['create', 'update', 'delete', 'read'],
   blogTag: ['create', 'update', 'delete', 'read'],
   pos: ['create', 'update', 'delete', 'read'],
+  surcharge: ['create', 'update', 'delete', 'read'],
 };
 
 // Hàm tạo danh sách permissions theo resource/action
