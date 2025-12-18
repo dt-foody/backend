@@ -77,7 +77,7 @@ class CouponService extends BaseService {
       };
     });
 
-    if (!user) return formattedPublic;
+    if (!user || !user.profile) return formattedPublic;
 
     // 2. Get Private Vouchers
     // Lấy voucher của user (Đã lưu hoặc được tặng)
