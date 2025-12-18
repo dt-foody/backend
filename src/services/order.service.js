@@ -1,4 +1,5 @@
 /* eslint-disable no-await-in-loop */
+const mongoose = require('mongoose');
 const BaseService = require('../utils/_base.service');
 const { Order, Product, Combo, Coupon, PricePromotion, Voucher, Customer, Employee } = require('../models');
 const { getPayOS } = require('../config/payos');
@@ -16,6 +17,52 @@ class OrderService extends BaseService {
     this.adminPanelCreateOrder = this.adminPanelCreateOrder.bind(this);
     this.adminPanelUpdateOrder = this.adminPanelUpdateOrder.bind(this);
     this.calculateShippingFee = this.calculateShippingFee.bind(this);
+    this.getUserPromotionUsageMap = this.getUserPromotionUsageMap.bind(this);
+  }
+
+  /**
+   * Lấy bản đồ số lượng sử dụng Promotion của User (Chỉ tính đơn thành công)
+   * @param {string} userId
+   * @param {string[]} relevantPromoIds - Chỉ các ID có maxQuantityPerCustomer > 0
+   * @returns {Promise<Map<string, number>>}
+   */
+  async getUserPromotionUsageMap(userId, relevantPromoIds) {
+    const usageMap = new Map();
+
+    if (!userId || !relevantPromoIds || relevantPromoIds.length === 0) {
+      return usageMap;
+    }
+
+    const promoObjectIds = relevantPromoIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    // Thống kê bằng Aggregation trên this.model
+    const stats = await this.model.aggregate([
+      {
+        $match: {
+          item: new mongoose.Types.ObjectId(userId),
+          // Chỉ tính các trạng thái đơn hàng "có hiệu lực" (đã xác nhận hoặc thành công)
+          status: { $in: ['confirmed', 'delivered', 'completed'] },
+        },
+      },
+      { $unwind: '$items' },
+      {
+        $match: {
+          'items.promotion': { $in: promoObjectIds },
+        },
+      },
+      {
+        $group: {
+          _id: '$items.promotion',
+          totalUsed: { $sum: '$items.quantity' },
+        },
+      },
+    ]);
+
+    stats.forEach((stat) => {
+      usageMap.set(stat._id.toString(), stat.totalUsed);
+    });
+
+    return usageMap;
   }
 
   /* ============================================================
