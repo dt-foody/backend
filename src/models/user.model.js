@@ -55,10 +55,18 @@ const userSchema = new Schema(
       type: Schema.Types.ObjectId,
       refPath: 'profileType', // 🔥 dynamic ref
     },
+    referralCode: {
+      type: String,
+    },
+    referredBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    }
   },
   {
     timestamps: true,
-  }
+  },
+  
 );
 
 // add plugin that converts mongoose to json

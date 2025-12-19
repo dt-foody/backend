@@ -6,6 +6,23 @@ const employeeService = require('./employee.service');
 const Token = require('../models/token.model');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
+const crypto = require('crypto');
+const logger = require('../config/logger');
+
+
+
+
+const generateUniqueReferralCode = async (email) => {
+  const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const emailHash = crypto
+    .createHash('md5')
+    .update(email)
+    .digest('hex')
+    .substring(0, 4)
+    .toUpperCase();
+
+  return `${randomPart}${emailHash}`;
+}
 
 /**
  * Đăng ký tài khoản mới dựa trên subdomain.
@@ -21,23 +38,48 @@ const register = async (subdomain, userBody) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
-  const { email, phone, password } = userBody;
+  const { email, phone, password, referralCode } = userBody;
   const isAdmin = subdomain === 'admin';
   const role = isAdmin ? 'admin' : 'customer';
+
+  let referredByUser = null;
+  if (referralCode && referralCode.trim()) {
+    referredByUser = await userService.findOne({ 
+      referralCode: referralCode.trim().toUpperCase(),
+      isActive: true,
+      isEmailVerified: true
+    }, { lean: true });
+    
+    if (!referredByUser) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Mã giới thiệu không hợp lệ');
+    }
+    
+    if (referredByUser.email === email) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Không thể sử dụng mã giới thiệu của chính bạn');
+    }
+  }
 
   let newUser;
 
   try {
-    // 2. Tạo User trước
-    newUser = await userService.create({
+    const newUserReferralCode = await generateUniqueReferralCode(email);
+
+    const userData = {
       email,
       phone,
       password,
       role,
       isEmailVerified: false,
-      profileType: isAdmin ? 'Employee' : 'Customer', // Định nghĩa type trước
-      // profile: chưa có ID, để null hoặc update sau (do đã bỏ required: true)
-    });
+      profileType: isAdmin ? 'Employee' : 'Customer',
+      referralCode: newUserReferralCode,
+    };
+
+    // Thêm referredBy nếu có người giới thiệu
+    if (referredByUser) {
+      userData.referredBy = referredByUser._id;
+    }
+
+    newUser = await userService.create(userData);
 
     // 3. Chuẩn bị data cho Profile
     // QUAN TRỌNG: Phải gán User ID vào đây
