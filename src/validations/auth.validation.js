@@ -9,6 +9,7 @@ const register = {
     phone: Joi.string().trim().required(),
     gender: Joi.string().valid('male', 'female', 'other').default('other'),
     birthDate: Joi.date().optional(),
+    referralCode: Joi.string().trim().optional(),
   }),
 };
 

@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { authService, customerService, employeeService, tokenService, emailService } = require('../services');
+const { authService, customerService, employeeService, tokenService, emailService, userService } = require('../services');
 const { getEffectivePermissions } = require('../utils/permission');
 const config = require('../config/config');
 
@@ -12,7 +12,6 @@ const register = catchAsync(async (req, res) => {
 
   // (Cách khác): Nếu bạn có một middleware riêng để xử lý subdomain:
   // const subdomain = req.subdomain;
-
   const user = await authService.register(subdomain, req.body);
 
   const verifyEmailToken = await tokenService.generateVerifyEmailToken(user);
@@ -141,10 +140,21 @@ const getMe = catchAsync(async (req, res) => {
 
   const permissions = await getEffectivePermissions(user);
 
+  const listReferral = await userService.getListReferrals(user.id);
+  const dataReferral = listReferral.map(item => {
+    return {
+      _id: item._id,
+      email: item.email,
+      phone: item.phone,
+      name: item.profile?.name || null,
+    };
+  });
+
   res.status(httpStatus.OK).send({
     user,
     me,
     permissions,
+    listReferral: dataReferral,
   });
 });
 
