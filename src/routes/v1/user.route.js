@@ -47,6 +47,9 @@ class UserRoute extends BaseRoute {
       this.controller.changePassword.bind(this.controller)
     );
 
+    // get referral info
+    this.router.get('/referral', auth(), this.controller.getReferral.bind(this.controller));
+
     // Thêm route tùy chỉnh cho changePassword
     // this.addCustomRoutes();
   }

@@ -33,11 +33,6 @@ class UserService extends BaseService {
     user.password = newPassword;
     await user.save();
   }
-
-  async getListReferrals(userId) {
-    const referrals = await this.model.find({ referredBy: userId, isActive: true, isEmailVerified: true }).populate('profile').lean();
-    return referrals;
-  }
 }
 
 module.exports = new UserService();

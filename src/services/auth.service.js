@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const crypto = require('crypto');
 const tokenService = require('./token.service');
 const userService = require('./user.service');
 const customerService = require('./customer.service');
@@ -6,23 +7,13 @@ const employeeService = require('./employee.service');
 const Token = require('../models/token.model');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
-const crypto = require('crypto');
-const logger = require('../config/logger');
-
-
-
 
 const generateUniqueReferralCode = async (email) => {
   const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
-  const emailHash = crypto
-    .createHash('md5')
-    .update(email)
-    .digest('hex')
-    .substring(0, 4)
-    .toUpperCase();
+  const emailHash = crypto.createHash('md5').update(email).digest('hex').substring(0, 4).toUpperCase();
 
   return `${randomPart}${emailHash}`;
-}
+};
 
 /**
  * Đăng ký tài khoản mới dựa trên subdomain.
@@ -44,16 +35,19 @@ const register = async (subdomain, userBody) => {
 
   let referredByUser = null;
   if (referralCode && referralCode.trim()) {
-    referredByUser = await userService.findOne({ 
-      referralCode: referralCode.trim().toUpperCase(),
-      isActive: true,
-      isEmailVerified: true
-    }, { lean: true });
-    
+    referredByUser = await userService.findOne(
+      {
+        referralCode: referralCode.trim().toUpperCase(),
+        isActive: true,
+        isEmailVerified: true,
+      },
+      { lean: true }
+    );
+
     if (!referredByUser) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Mã giới thiệu không hợp lệ');
     }
-    
+
     if (referredByUser.email === email) {
       throw new ApiError(httpStatus.BAD_REQUEST, 'Không thể sử dụng mã giới thiệu của chính bạn');
     }
