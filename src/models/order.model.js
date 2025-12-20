@@ -141,6 +141,18 @@ const OrderSchema = new Schema(
     shippingFee: { type: Number, default: 0, min: 0 },
     grandTotal: { type: Number, required: true, min: 0 },
 
+    // Tổng tiền phụ thu (thời tiết, lễ tết...)
+    surchargeAmount: { type: Number, default: 0, min: 0 },
+
+    // Chi tiết các loại phụ thu đã áp dụng tại thời điểm đặt hàng
+    surcharges: [
+      {
+        id: { type: Schema.Types.ObjectId, ref: 'Surcharge' },
+        name: { type: String },
+        cost: { type: Number },
+      },
+    ],
+
     // Thanh toán
     payment: {
       method: {

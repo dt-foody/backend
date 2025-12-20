@@ -1,7 +1,7 @@
 /* eslint-disable no-await-in-loop */
 const mongoose = require('mongoose');
 const BaseService = require('../utils/_base.service');
-const { Order, Product, Combo, Coupon, PricePromotion, Voucher, Customer, Employee } = require('../models');
+const { Order, Product, Combo, Coupon, PricePromotion, Voucher, Customer, Employee, Surcharge } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 const logger = require('../config/logger');
@@ -408,6 +408,13 @@ class OrderService extends BaseService {
 
     const totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
 
+    let calculatedSurchargeAmount = 0;
+    const dbSurcharges = await Surcharge.find({ isActive: true });
+    const appliedSurcharges = dbSurcharges.map((s) => {
+      calculatedSurchargeAmount += s.cost;
+      return { id: s._id, name: s.name, cost: s.cost };
+    });
+
     const { appliedDocs, totalDiscountAmount } = await OrderService.calculateTotalDiscount({
       coupons,
       vouchers,
@@ -415,7 +422,8 @@ class OrderService extends BaseService {
     });
 
     const shippingFee = typeof payload.shippingFee === 'number' ? payload.shippingFee : 0;
-    const grandTotal = Math.max(0, totalAmount - totalDiscountAmount + shippingFee);
+    const grandTotal = Math.max(0, totalAmount - totalDiscountAmount + shippingFee + calculatedSurchargeAmount);
+
     const orderCode = payload.orderCode || Date.now();
     const deliveryTime = payload.deliveryTime || { option: 'immediate', scheduledAt: null };
 
@@ -423,6 +431,8 @@ class OrderService extends BaseService {
       ...payload,
       items: orderItems,
       appliedCoupons: appliedDocs,
+      surcharges: appliedSurcharges, // Lưu chi tiết phụ thu vào đơn hàng
+      surchargeAmount: calculatedSurchargeAmount, // Tổng tiền phụ thu
       totalAmount,
       discountAmount: totalDiscountAmount,
       shippingFee,
