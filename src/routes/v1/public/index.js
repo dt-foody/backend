@@ -14,6 +14,7 @@ const customerRoute = require('./customer.route');
 const orderRoute = require('./order.route');
 const payosWebhook = require('./payos.webhook');
 const menuRoute = require('./menu.route');
+const surchargeRoute = require('./surcharge.route');
 
 const router = express.Router();
 
@@ -69,6 +70,10 @@ const defaultRoutes = [
   {
     path: '/menu',
     route: menuRoute,
+  },
+  {
+    path: '/surcharges',
+    route: surchargeRoute,
   },
 ];
 

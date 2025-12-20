@@ -127,6 +127,7 @@ const customerOrder = {
     totalAmount: Joi.number().min(0).required(),
     discountAmount: Joi.number().min(0).default(0),
     shippingFee: Joi.number().min(0).default(0),
+    surchargeAmount: Joi.number().min(0).default(0),
     grandTotal: Joi.number().min(0).required(),
 
     payment: paymentSchema.required(),
@@ -160,6 +161,7 @@ const create = {
     totalAmount: Joi.number().min(0).required(),
     discountAmount: Joi.number().min(0).default(0),
     shippingFee: Joi.number().min(0).default(0),
+    surchargeAmount: Joi.number().min(0).default(0),
     grandTotal: Joi.number().min(0).required(),
 
     payment: paymentSchema.default({ method: 'cash', status: 'pending' }),
@@ -203,6 +205,7 @@ const adminPanelUpdateOrder = {
 
     discountAmount: Joi.number().min(0),
     shippingFee: Joi.number().min(0),
+    surchargeAmount: Joi.number().min(0),
 
     payment: paymentSchema,
     shipping: shippingSchema.allow(null),
