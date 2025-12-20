@@ -3,7 +3,7 @@ const httpStatus = require('http-status');
 const validate = require('../../../middlewares/validate');
 const orderValidation = require('../../../validations/order.validation');
 const orderController = require('../../../controllers/order.controller');
-const { auth } = require('../../../middlewares/auth');
+const { auth, authOptional } = require('../../../middlewares/auth');
 const queryMiddleware = require('../../../middlewares/queryMiddleware');
 
 const { BAD_REQUEST } = httpStatus;
@@ -44,7 +44,7 @@ router.get(
   getByCode,
   orderController.getByCode
 );
-router.post('/', validate(orderValidation.customerOrder), auth(), customerOrder, orderController.customerOrder);
+router.post('/', validate(orderValidation.customerOrder), authOptional(), customerOrder, orderController.customerOrder);
 router.post('/anonymous', validate(orderValidation.customerOrder), customerOrder, orderController.customerOrder);
 
 module.exports = router;
