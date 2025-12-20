@@ -236,9 +236,9 @@ const OrderSchema = new Schema(
             required: true,
           },
           scheduledAt: { type: Date, default: null },
-          timeSlot: { 
-            type: String, 
-            default: null,
+          timeSlot: {
+            type: String,
+            default: '',
           },
         },
         { _id: false }
