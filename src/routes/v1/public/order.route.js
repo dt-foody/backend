@@ -45,5 +45,6 @@ router.get(
   orderController.getByCode
 );
 router.post('/', validate(orderValidation.customerOrder), auth(), customerOrder, orderController.customerOrder);
+router.post('/anonymous', validate(orderValidation.customerOrder), customerOrder, orderController.customerOrder);
 
 module.exports = router;
