@@ -399,7 +399,7 @@ class OrderService extends BaseService {
   /* ============================================================
    * 3. PREPARE DATA
    * ============================================================ */
-  async prepareOrderData(payload, { useMenuPrice = true } = {}) {
+  async prepareOrderData(payload, { useMenuPrice = true, isApplySurcharge = true } = {}) {
     const { items, coupons = [], vouchers = [] } = payload;
 
     const orderItems = useMenuPrice
@@ -409,11 +409,16 @@ class OrderService extends BaseService {
     const totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
 
     let calculatedSurchargeAmount = 0;
-    const dbSurcharges = await Surcharge.find({ isActive: true });
-    const appliedSurcharges = dbSurcharges.map((s) => {
-      calculatedSurchargeAmount += s.cost;
-      return { id: s._id, name: s.name, cost: s.cost };
-    });
+    let surcharges = [];
+    let appliedSurcharges = [];
+
+    if (isApplySurcharge) {
+      surcharges = await Surcharge.find({ isActive: true });
+      appliedSurcharges = surcharges.map((s) => {
+        calculatedSurchargeAmount += s.cost;
+        return { id: s._id, name: s.name, cost: s.cost };
+      });
+    }
 
     const { appliedDocs, totalDiscountAmount } = await OrderService.calculateTotalDiscount({
       coupons,
@@ -529,7 +534,7 @@ class OrderService extends BaseService {
    * 5. CONTROLLER ACTIONS
    * ============================================================ */
   async customerOrder(payload) {
-    const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
+    const orderData = await this.prepareOrderData(payload, { useMenuPrice: true, isApplySurcharge: true });
     const order = await this.model.create(orderData);
 
     try {
@@ -578,7 +583,7 @@ class OrderService extends BaseService {
   }
 
   async adminPanelCreateOrder(payload) {
-    const orderData = await this.prepareOrderData(payload, { useMenuPrice: true });
+    const orderData = await this.prepareOrderData(payload, { useMenuPrice: true, isApplySurcharge: false });
     const order = await this.model.create(orderData);
     return { message: 'Admin đã tạo đơn thành công.', order };
   }
