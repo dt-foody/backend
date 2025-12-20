@@ -134,13 +134,22 @@ class OrderService extends BaseService {
           const product = await Product.findById(cartItem.item.id);
           if (!product) throw new Error(`Sản phẩm không tồn tại: ${cartItem.item.name}`);
 
-          const activePromo = await findActivePromotion(product._id, 'product');
+          // Tính giá gốc
           const originalBasePrice = product.basePrice;
-          const discountAmount = OrderService.calculatePromotionDiscount(originalBasePrice, activePromo);
-          const basePrice = Math.max(0, originalBasePrice - discountAmount);
 
+          // Tính giá tùy chọn
           const normalizedOptions = OrderService.normalizeOptions(cartItem.options);
           const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
+
+          // Tổng giá trước khuyến mãi
+          const priceBeforePromo = product.basePrice + optionsPrice;
+
+          // Tìm khuyến mãi áp dụng
+          const activePromo = await findActivePromotion(product._id, 'product');
+          const discountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo);
+
+          // Tính giá cuối cùng sau khuyến mãi
+          const finalPrice = Math.max(0, priceBeforePromo - discountAmount);
 
           return {
             item: product._id,
@@ -148,8 +157,8 @@ class OrderService extends BaseService {
             name: product.name,
             quantity: cartItem.quantity,
             originalBasePrice,
-            basePrice,
-            price: basePrice + optionsPrice,
+            basePrice: product.basePrice,
+            price: finalPrice,
             options: normalizedOptions,
             comboSelections: [],
             note: cartItem.note || '',
@@ -186,6 +195,7 @@ class OrderService extends BaseService {
             const normalizedOptions = OrderService.normalizeOptions(selection.options);
             const optionsPrice = normalizedOptions.reduce((s, o) => s + o.priceModifier, 0);
 
+            // Thu thập các khoản phụ trội
             totalSurcharges += additionalPrice;
             totalOptions += optionsPrice;
             totalMarketPrice += product.basePrice + optionsPrice + additionalPrice;
@@ -210,37 +220,43 @@ class OrderService extends BaseService {
 
           const resolvedSelections = await Promise.all(selectionPromises);
 
-          let priceAfterInternalLogic = 0;
+          // A. Tính giá nền Combo dựa trên mode (FIXED/SLOT_PRICE/DISCOUNT)
+          let priceBaseCombo = 0;
           if (combo.pricingMode === 'FIXED') {
-            priceAfterInternalLogic = combo.comboPrice;
+            priceBaseCombo = combo.comboPrice;
           } else if (combo.pricingMode === 'SLOT_PRICE') {
-            priceAfterInternalLogic = totalComponentBase;
+            priceBaseCombo = totalComponentBase;
           } else if (combo.pricingMode === 'DISCOUNT') {
             const discType = (combo.discountType || '').toLowerCase();
             if (discType === 'percentage' || discType === 'percent') {
-              priceAfterInternalLogic = Math.round(totalComponentBase * (1 - combo.discountValue / 100));
+              priceBaseCombo = Math.round(totalComponentBase * (1 - combo.discountValue / 100));
             } else if (discType === 'fixed_amount' || discType === 'amount') {
-              priceAfterInternalLogic = Math.max(0, totalComponentBase - combo.discountValue);
+              priceBaseCombo = Math.max(0, totalComponentBase - combo.discountValue);
             } else {
-              priceAfterInternalLogic = totalComponentBase;
+              priceBaseCombo = totalComponentBase;
             }
           } else {
-            priceAfterInternalLogic = combo.comboPrice || 0;
+            priceBaseCombo = combo.comboPrice || 0;
           }
 
+          // B. MỚI: Gộp Topping và Phụ thu món vào giá trước khi tính KM (Yêu cầu đối tác)
+          const priceBeforePromo = priceBaseCombo + totalSurcharges + totalOptions;
+
+          // C. Áp dụng khuyến mãi lên TỔNG GIÁ (Combo + Toppings + Surcharges)
           const activePromo = await findActivePromotion(combo._id, 'combo');
-          const promoDiscountAmount = OrderService.calculatePromotionDiscount(priceAfterInternalLogic, activePromo);
-          const finalBasePrice = Math.max(0, priceAfterInternalLogic - promoDiscountAmount);
-          const finalPrice = finalBasePrice + totalSurcharges + totalOptions;
+          const promoDiscountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo);
+
+          // D. Giá cuối cùng của 1 Combo
+          const finalPrice = Math.max(0, priceBeforePromo - promoDiscountAmount);
 
           return {
             item: combo._id,
             itemType: 'Combo',
             name: combo.name,
             quantity: cartItem.quantity,
-            originalBasePrice: totalMarketPrice,
-            basePrice: finalBasePrice,
-            price: finalPrice,
+            originalBasePrice: totalMarketPrice, // Giá thị trường nếu mua lẻ
+            basePrice: priceBaseCombo, // Snapshot giá nền Combo
+            price: finalPrice, // Giá thực tế thu của khách (đã gộp mọi thứ và trừ KM)
             options: [],
             comboSelections: resolvedSelections.map((r) => r.doc),
             note: cartItem.note || '',
