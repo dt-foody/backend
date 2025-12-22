@@ -60,9 +60,9 @@ const OrderItemSchema = new Schema(
     quantity: { type: Number, required: true, min: 1 },
 
     // --- 3. SNAPSHOT GIÁ ---
-    originalBasePrice: { type: Number, required: true, min: 0 }, // Giá thị trường
-    basePrice: { type: Number, required: true, min: 0 }, // Giá bán (sau promo product/combo)
-    price: { type: Number, required: true, min: 0 }, // Giá final (đã + topping)
+    originalBasePrice: { type: Number, required: true, min: 0 }, // Giá trị thực tế nếu không mua Combo
+    basePrice: { type: Number, required: true, min: 0 }, // Giá gốc (chưa cộng option, chưa trừ KM)
+    price: { type: Number, required: true, min: 0 }, //  Giá thực tế thu của khách (đã gộp mọi thứ và trừ KM)
 
     // --- 4. TÙY CHỌN KÈM THEO ---
     options: [OrderItemOptionSchema],

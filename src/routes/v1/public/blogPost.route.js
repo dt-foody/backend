@@ -11,6 +11,10 @@ async function paginate(req, res, next) {
   if (categorySlug) {
     const category = await blogCategoryService.findOne({ slug: categorySlug });
 
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
     req.query.categories = category._id;
   }
 
