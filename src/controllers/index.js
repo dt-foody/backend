@@ -16,3 +16,4 @@ module.exports.blogCategoryController = require('./blogCategory.controller');
 module.exports.blogTagController = require('./blogTag.controller');
 module.exports.menuController = require('./menu.controller');
 module.exports.surchargeController = require('./surcharge.controller');
+module.exports.dealSettingController = require('./dealSetting.controller');

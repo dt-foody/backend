@@ -20,6 +20,7 @@ const voucherRoute = require('./voucher.route');
 const employeeRoute = require('./employee.route');
 const menuRoute = require('./menu.route');
 const surchargeRoute = require('./surcharge.route');
+const dealSettingRoute = require('./dealSetting.route');
 
 const router = express.Router();
 
@@ -99,6 +100,10 @@ const defaultRoutes = [
   {
     path: '/surcharges',
     route: surchargeRoute,
+  },
+  {
+    path: '/deal-settings',
+    route: dealSettingRoute,
   },
 ];
 

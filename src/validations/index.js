@@ -16,3 +16,4 @@ module.exports.blogPostValidation = require('./blogPost.validation');
 module.exports.blogCategoryValidation = require('./blogCategory.validation');
 module.exports.blogTagValidation = require('./blogTag.validation');
 module.exports.surchargeValidation = require('./surcharge.validation');
+module.exports.dealSettingValidation = require('./dealSetting.validation');

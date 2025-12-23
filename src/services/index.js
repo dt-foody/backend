@@ -17,3 +17,4 @@ module.exports.blogPostService = require('./blogPost.service');
 module.exports.blogCategoryService = require('./blogCategory.service');
 module.exports.blogTagService = require('./blogTag.service');
 module.exports.surchargeService = require('./surcharge.service');
+module.exports.dealSettingService = require('./dealSetting.service');
