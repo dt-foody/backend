@@ -139,9 +139,119 @@ const sendVerificationEmail = async (profileName, to, token) => {
   await sendEmail(to, subject, null, html);
 };
 
+
+const sendReferralReminderEmail = async (user) => {
+  const subject = 'Chia sẻ niềm vui - Nhận ngay ưu đãi cùng Lưu Chi 🎁';
+  const referralProgramUrl = `https://luuchi.com.vn/vi/referral-program`;
+
+  const payload = {
+    title: 'Chương trình giới thiệu bạn bè',
+    profileName: user.profile?.name || 'Bạn',
+    userEmail: user.email,
+    referralCode: user.referralCode,
+    referralProgramUrl,
+    registeredDays: calculateDaysSinceRegistration(user.createdAt),
+  };
+
+  const html = await getTemplate('referral-reminder.hbs', payload);
+
+  await sendEmail(user.email, subject, null, html);
+};
+
+const calculateDaysSinceRegistration = (createdAt) => {
+  const now = new Date();
+  const created = new Date(createdAt);
+  const diffTime = Math.abs(now - created);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+const sendReferralRemindersToEligibleUsers = async () => {
+  try {
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+    
+    const startOfDay = new Date(fifteenDaysAgo.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(fifteenDaysAgo.setHours(23, 59, 59, 999));
+    
+    const eligibleUsers = await User.find({
+      createdAt: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      isEmailVerified: true,
+      isActive: true,
+      role: 'customer',
+      profileType: 'Customer',
+    })
+    .populate('profile')
+    .select('email createdAt referralCode profile');
+    
+    console.log(`[Referral Reminder] Found ${eligibleUsers.length} eligible users registered on ${startOfDay.toLocaleDateString()}`);
+    
+    if (eligibleUsers.length === 0) {
+      console.log('[Referral Reminder] No eligible users found for today');
+      return { success: true, sent: 0, failed: 0, total: 0 };
+    }
+    
+    let sentCount = 0;
+    let failedCount = 0;
+    const usersNeedReferralCode = [];
+    
+    for (const user of eligibleUsers) {
+      if (!user.referralCode) {
+        usersNeedReferralCode.push({
+          updateOne: {
+            filter: { _id: user._id },
+            update: { 
+              $set: { 
+                referralCode: user._id.toString().substring(0, 8).toUpperCase() 
+              } 
+            }
+          }
+        });
+        user.referralCode = user._id.toString().substring(0, 8).toUpperCase();
+      }
+    }
+    
+    if (usersNeedReferralCode.length > 0) {
+      await User.bulkWrite(usersNeedReferralCode);
+      console.log(`[Referral Reminder] Generated referral codes for ${usersNeedReferralCode.length} users`);
+    }
+    
+    for (const user of eligibleUsers) {
+      try {
+        await sendReferralReminderEmail(user);
+        sentCount++;
+        console.log(`[Referral Reminder] ✓ Sent to: ${user.email} (registered: ${user.createdAt.toLocaleDateString()})`);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+      } catch (error) {
+        failedCount++;
+        console.error(`[Referral Reminder] ✗ Failed to send to ${user.email}:`, error.message);
+      }
+    }
+    
+    console.log(`[Referral Reminder] Campaign completed - Sent: ${sentCount}, Failed: ${failedCount}`);
+    
+    return { 
+      success: true, 
+      sent: sentCount, 
+      failed: failedCount,
+      total: eligibleUsers.length 
+    };
+    
+  } catch (error) {
+    console.error('[Referral Reminder] Error in campaign:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   transport,
   sendEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
+  sendReferralRemindersToEligibleUsers,
 };
