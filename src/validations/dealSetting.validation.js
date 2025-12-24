@@ -1,12 +1,20 @@
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
+// Định nghĩa cấu trúc lồng nhau dùng chung
+const dealOptionConfig = Joi.object().keys({
+  value: Joi.boolean().default(false),
+  note: Joi.string().allow('', null).default(''),
+  activeNote: Joi.boolean().default(false),
+  showNoteWhen: Joi.string().valid('on', 'off', 'always').default('off'),
+});
+
 const create = {
   body: Joi.object().keys({
-    allowFastDelivery: Joi.boolean(),
-    allowScheduledDelivery: Joi.boolean(),
-    allowCashPayment: Joi.boolean(),
-    allowBankTransfer: Joi.boolean(),
+    fastDelivery: dealOptionConfig,
+    scheduledDelivery: dealOptionConfig,
+    cashPayment: dealOptionConfig,
+    bankTransfer: dealOptionConfig,
   }),
 };
 
@@ -26,10 +34,10 @@ const updateById = {
   }),
   body: Joi.object()
     .keys({
-      allowFastDelivery: Joi.boolean(),
-      allowScheduledDelivery: Joi.boolean(),
-      allowCashPayment: Joi.boolean(),
-      allowBankTransfer: Joi.boolean(),
+      fastDelivery: dealOptionConfig,
+      scheduledDelivery: dealOptionConfig,
+      cashPayment: dealOptionConfig,
+      bankTransfer: dealOptionConfig,
     })
     .min(1),
 };

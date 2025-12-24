@@ -1,19 +1,48 @@
 const mongoose = require('mongoose');
 const { toJSON, paginate } = require('./plugins');
 
+// Định nghĩa Schema con cho từng tùy chọn để tái sử dụng
+const dealOptionConfigSchema = mongoose.Schema(
+  {
+    value: { type: Boolean, default: false },
+    note: { type: String, default: '' },
+    activeNote: { type: Boolean, default: false },
+    showNoteWhen: {
+      type: String,
+      enum: ['on', 'off', 'always'],
+      default: 'off',
+    },
+  },
+  { _id: false }
+); // _id: false để tránh tạo ID thừa cho các object con này
+
 const dealSettingSchema = mongoose.Schema(
   {
-    allowFastDelivery: { type: Boolean, default: false },
-    allowScheduledDelivery: { type: Boolean, default: false },
-    allowCashPayment: { type: Boolean, default: false },
-    allowBankTransfer: { type: Boolean, default: false },
+    // Cấu hình giao hàng
+    fastDelivery: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
+    scheduledDelivery: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
+    // Cấu hình thanh toán
+    cashPayment: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
+    bankTransfer: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Thêm plugin để convert sang JSON và phân trang (đúng chuẩn dự án của bạn)
+// Thêm plugin để convert sang JSON và phân trang
 dealSettingSchema.plugin(toJSON);
 dealSettingSchema.plugin(paginate);
 
