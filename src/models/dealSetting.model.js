@@ -18,7 +18,21 @@ const dealOptionConfigSchema = mongoose.Schema(
 
 const dealSettingSchema = mongoose.Schema(
   {
-    // Cấu hình giao hàng
+    // ============================================================
+    // 1. CẤU HÌNH LOẠI HÌNH DỊCH VỤ (MỚI)
+    // ============================================================
+    homeDelivery: {
+      type: dealOptionConfigSchema,
+      default: () => ({}), // Mặc định bật giao hàng
+    },
+    storePickup: {
+      type: dealOptionConfigSchema,
+      default: () => ({}), // Mặc định bật đến lấy
+    },
+
+    // ============================================================
+    // 2. CẤU HÌNH CHI TIẾT GIAO HÀNG
+    // ============================================================
     fastDelivery: {
       type: dealOptionConfigSchema,
       default: () => ({}),
@@ -27,7 +41,10 @@ const dealSettingSchema = mongoose.Schema(
       type: dealOptionConfigSchema,
       default: () => ({}),
     },
-    // Cấu hình thanh toán
+
+    // ============================================================
+    // 3. CẤU HÌNH THANH TOÁN
+    // ============================================================
     cashPayment: {
       type: dealOptionConfigSchema,
       default: () => ({}),

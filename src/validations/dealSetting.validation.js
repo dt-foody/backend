@@ -11,6 +11,11 @@ const dealOptionConfig = Joi.object().keys({
 
 const create = {
   body: Joi.object().keys({
+    // 🔥 BỔ SUNG 2 TRƯỜNG MỚI
+    homeDelivery: dealOptionConfig,
+    storePickup: dealOptionConfig,
+
+    // Các trường cũ
     fastDelivery: dealOptionConfig,
     scheduledDelivery: dealOptionConfig,
     cashPayment: dealOptionConfig,
@@ -34,6 +39,10 @@ const updateById = {
   }),
   body: Joi.object()
     .keys({
+      // 🔥 BỔ SUNG KHI UPDATE
+      homeDelivery: dealOptionConfig,
+      storePickup: dealOptionConfig,
+
       fastDelivery: dealOptionConfig,
       scheduledDelivery: dealOptionConfig,
       cashPayment: dealOptionConfig,
