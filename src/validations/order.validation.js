@@ -64,6 +64,7 @@ const paymentSchema = Joi.object({
   status: Joi.string().valid('pending', 'paid', 'failed', 'refunded').default('pending'),
   transactionId: Joi.string().allow('', null).default(''),
   checkoutUrl: Joi.string().allow('', null).default(''),
+  message: Joi.string().allow('', null).default(''),
 });
 
 const shippingSchema = Joi.object({
