@@ -1,3 +1,5 @@
+// dt-foody/backend/.../src/validations/order.validation.js
+
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
@@ -64,27 +66,38 @@ const paymentSchema = Joi.object({
   status: Joi.string().valid('pending', 'paid', 'failed', 'refunded').default('pending'),
   transactionId: Joi.string().allow('', null).default(''),
   checkoutUrl: Joi.string().allow('', null).default(''),
+  qrCode: Joi.string().allow('', null).default(''), // Bổ sung cho PayOS nếu cần
   message: Joi.string().allow('', null).default(''),
 });
 
-const shippingSchema = Joi.object({
+// 🔥 STRICT SHIPPING SCHEMA (Dùng cho Delivery)
+const deliveryShippingSchema = Joi.object({
   address: Joi.object({
     _id: Joi.string().allow(null, ''),
     isDefault: Joi.boolean().default(true),
     label: Joi.string().allow('', null),
     recipientName: Joi.string().required(),
     recipientPhone: Joi.string().required(),
-    fullAddress: Joi.string().allow('', null),
+
+    // Các trường địa chỉ bắt buộc khi Ship
+    fullAddress: Joi.string().required(),
     street: Joi.string().required(),
     ward: Joi.string().required(),
     district: Joi.string().required(),
     city: Joi.string().required(),
+
     location: Joi.object({
       type: Joi.string().valid('Point').default('Point'),
       coordinates: Joi.array(),
     }).optional(),
   }).required(),
   status: Joi.string().valid('pending', 'preparing', 'delivering', 'delivered', 'failed', 'canceled').default('pending'),
+});
+
+// 🔥 LOOSE SHIPPING SCHEMA (Dùng cho TakeAway / DineIn)
+const looseShippingSchema = Joi.object({
+  address: Joi.object().allow(null, {}).unknown(true), // Cho phép object rỗng hoặc null
+  status: Joi.string().default('pending'),
 });
 
 const deliveryTimeSchema = Joi.object({
@@ -107,7 +120,7 @@ const deliveryTimeSchema = Joi.object({
 });
 
 /* ============================================================
- * 3️⃣ SUB-SCHEMA: COUPON & VOUCHER (TÁCH BIỆT)
+ * 3️⃣ SUB-SCHEMA: COUPON & VOUCHER
  * ============================================================ */
 const couponInputSchema = Joi.object({
   id: Joi.string().custom(objectId).required(),
@@ -128,7 +141,6 @@ const customerOrder = {
   body: Joi.object({
     items: Joi.array().items(createOrderItemSchema).min(1).required(),
 
-    // 🔥 Input rõ ràng 2 loại
     coupons: Joi.array().items(couponInputSchema).default([]),
     vouchers: Joi.array().items(voucherInputSchema).default([]),
 
@@ -139,12 +151,20 @@ const customerOrder = {
     grandTotal: Joi.number().min(0).required(),
 
     payment: paymentSchema.required(),
-    shipping: shippingSchema.allow(null),
     deliveryTime: deliveryTimeSchema.optional(),
 
     note: Joi.string().allow('', null).default(''),
-    orderType: Joi.string().allow('', null).default(''),
-    channel: Joi.string().allow('', null).default(''),
+
+    // 🔥 Định nghĩa rõ các loại Order
+    orderType: Joi.string().valid('Delivery', 'TakeAway', 'DineIn').default('Delivery'),
+    channel: Joi.string().allow('', null).default('WebApp'),
+
+    // 🔥 LOGIC QUAN TRỌNG: Điều kiện Shipping dựa trên OrderType
+    shipping: Joi.when('orderType', {
+      is: 'TakeAway',
+      then: looseShippingSchema.allow(null), // Nếu TakeAway: Validate lỏng lẻo
+      otherwise: deliveryShippingSchema.required(), // Nếu Delivery: Validate chặt (bắt buộc địa chỉ)
+    }),
   }),
 };
 
@@ -162,7 +182,6 @@ const create = {
 
     items: Joi.array().items(createOrderItemSchema).min(1).required(),
 
-    // 🔥 Admin cũng dùng input tách biệt
     coupons: Joi.array().items(couponInputSchema).default([]),
     vouchers: Joi.array().items(voucherInputSchema).default([]),
 
@@ -173,14 +192,21 @@ const create = {
     grandTotal: Joi.number().min(0).required(),
 
     payment: paymentSchema.default({ method: 'cash', status: 'pending' }),
-    shipping: shippingSchema.allow(null),
     deliveryTime: deliveryTimeSchema.optional(),
 
     status: Joi.string().default('pending'),
-    orderType: Joi.string().allow('', null),
-    channel: Joi.string().allow('', null),
     note: Joi.string().allow('', null),
     createdBy: Joi.string().custom(objectId).allow(null),
+
+    orderType: Joi.string().valid('Delivery', 'TakeAway', 'DineIn').default('Delivery'),
+    channel: Joi.string().allow('', null),
+
+    // Áp dụng logic tương tự cho Admin
+    shipping: Joi.when('orderType', {
+      is: 'TakeAway',
+      then: looseShippingSchema.allow(null),
+      otherwise: deliveryShippingSchema.allow(null), // Admin có thể tạo đơn nháp chưa có địa chỉ, nhưng nếu có thì phải đúng
+    }),
   }),
 };
 
@@ -193,21 +219,10 @@ const adminPanelUpdateOrder = {
   body: Joi.object({
     profile: Joi.string().custom(objectId).allow(null),
     profileType: Joi.string().valid('Customer', 'Employee').allow(null),
-    status: Joi.string().valid(
-      'pending',
-      'confirmed',
-      'preparing',
-      'ready',
-      'waiting_for_driver',
-      'delivering',
-      'completed',
-      'canceled',
-      'refunded'
-    ),
+    status: Joi.string(),
 
     items: Joi.array().items(createOrderItemSchema).min(1),
 
-    // 🔥 Cho phép update danh sách mã (nếu gửi lên thì sẽ tính lại)
     coupons: Joi.array().items(couponInputSchema),
     vouchers: Joi.array().items(voucherInputSchema),
 
@@ -216,7 +231,7 @@ const adminPanelUpdateOrder = {
     surchargeAmount: Joi.number().min(0),
 
     payment: paymentSchema,
-    shipping: shippingSchema.allow(null),
+    shipping: Joi.object().unknown(true).allow(null), // Khi update cho phép linh hoạt hơn
     deliveryTime: deliveryTimeSchema,
 
     note: Joi.string().allow('', null),
@@ -225,7 +240,7 @@ const adminPanelUpdateOrder = {
   }).min(1),
 };
 
-// D. OTHER SCHEMAS (Pagination, Get, Delete...)
+// D. OTHER SCHEMAS
 const paginateOrders = {
   query: Joi.object({
     search: Joi.string().allow('', null),
@@ -234,6 +249,7 @@ const paginateOrders = {
     status: Joi.string(),
     paymentStatus: Joi.string(),
     shippingStatus: Joi.string(),
+    orderType: Joi.string(), // Thêm filter theo type
     startDate: Joi.date(),
     endDate: Joi.date(),
     sortBy: Joi.string(),
@@ -258,7 +274,7 @@ const getShippingFee = {
 module.exports = {
   create,
   customerOrder,
-  adminPanelCreateOrder: create, // Alias
+  adminPanelCreateOrder: create,
   adminPanelUpdateOrder,
   paginate: paginateOrders,
   findById,
