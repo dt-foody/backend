@@ -15,6 +15,8 @@ const create = {
     maxQuantity: Joi.number().min(0).default(0),
     dailyMaxUses: Joi.number().min(0).default(0),
     isActive: Joi.boolean().default(true),
+    minOrderValue: Joi.number().min(0).default(0),
+    limitPerOrder: Joi.number().min(0).default(0),
   }),
 };
 
@@ -55,6 +57,8 @@ const updateById = {
       dailyMaxUses: Joi.number().min(0),
       isActive: Joi.boolean(),
       isDeleted: Joi.boolean(),
+      minOrderValue: Joi.number().min(0),
+      limitPerOrder: Joi.number().min(0),
     })
     .min(1),
 };

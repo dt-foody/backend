@@ -48,6 +48,9 @@ const PricePromotionSchema = new Schema(
     // Độ ưu tiên của khuyến mãi
     priority: { type: Number, default: 0 },
 
+    minOrderValue: { type: Number, default: 0 }, // Đơn hàng tối thiểu (vd: 100,000)
+    limitPerOrder: { type: Number, default: 0 }, // Số lượng FS tối đa/đơn (vd: 1)
+
     // Audit
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     isDeleted: { type: Boolean, default: false },
