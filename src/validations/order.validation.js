@@ -249,6 +249,7 @@ const paginateOrders = {
     status: Joi.string(),
     paymentStatus: Joi.string(),
     shippingStatus: Joi.string(),
+    deliveryType: Joi.string(),
     orderType: Joi.string(), // Thêm filter theo type
     startDate: Joi.date(),
     endDate: Joi.date(),

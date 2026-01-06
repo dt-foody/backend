@@ -5,7 +5,7 @@ const { auth } = require('../../middlewares/auth'); // Import auth middleware
 const validate = require('../../middlewares/validate');
 
 function list(req, res, next) {
-  const { status, paymentStatus, shippingStatus, search } = req.query;
+  const { status, paymentStatus, shippingStatus, deliveryType, search } = req.query;
   if (paymentStatus) {
     req.query['payment.status'] = paymentStatus;
     delete req.query.paymentStatus;
@@ -14,6 +14,12 @@ function list(req, res, next) {
     req.query['shipping.status'] = shippingStatus;
     delete req.query.shippingStatus;
   }
+
+  if (deliveryType) {
+    req.query['deliveryTime.option'] = deliveryType;
+    delete req.query.deliveryType;
+  }
+
   if (search) {
     req.query.orderId = Number.isNaN(Number(search)) ? -1 : Number(search);
     delete req.query.search;
