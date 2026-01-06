@@ -90,6 +90,22 @@ const CustomerSchema = new Schema(
     isDeleted: { type: Boolean, default: false },
     deletedAt: { type: Date },
     deletedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+
+    // 1. Mã giới thiệu của bản thân khách hàng này
+    referralCode: {
+      type: String,
+      unique: true, // Bắt buộc duy nhất
+      sparse: true, // Cho phép null (khách cũ chưa có mã không bị lỗi unique)
+      index: true, // Index để tìm nhanh: Customer.findOne({ referralCode: 'ABC' })
+      trim: true,
+    },
+
+    // 2. Người đã giới thiệu khách hàng này
+    referredBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'Customer', // <--- QUAN TRỌNG: Ref tới bảng Customer, không phải User
+      index: true, // Index để truy vấn: "Ai đã được giới thiệu bởi ông A?"
+    },
   },
   { timestamps: true }
 );

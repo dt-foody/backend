@@ -7,5 +7,6 @@ const { auth } = require('../../../middlewares/auth');
 const router = express.Router();
 
 router.patch('/', validate(customerValidation.updateProfile), auth(), customerController.updateProfile);
+router.get('/referral', auth(), customerController.getReferral);
 
 module.exports = router;

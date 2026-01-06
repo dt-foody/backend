@@ -4,10 +4,13 @@ const tokenService = require('./token.service');
 const userService = require('./user.service');
 const customerService = require('./customer.service');
 const employeeService = require('./employee.service');
-const Token = require('../models/token.model');
+const { Token, Customer } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
 
+/**
+ * Tạo mã giới thiệu duy nhất dựa trên email và random bytes
+ */
 const generateUniqueReferralCode = async (email) => {
   const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
   const emailHash = crypto.createHash('md5').update(email).digest('hex').substring(0, 4).toUpperCase();
@@ -16,105 +19,90 @@ const generateUniqueReferralCode = async (email) => {
 };
 
 /**
- * Đăng ký tài khoản mới dựa trên subdomain.
- * Tạo User và (Customer hoặc Employee) tương ứng.
- * @param {string} subdomain - Lấy từ request (ví dụ: 'admin' hoặc 'app')
- * @param {object} userBody - Dữ liệu từ form (chứa email, password, name, phone, ...)
- * @returns {Promise<User>} Đối tượng User vừa được tạo
+ * Đăng ký tài khoản mới
+ * @param {string} subdomain
+ * @param {object} userBody
+ * @returns {Promise<User>}
  */
 const register = async (subdomain, userBody) => {
-  // 1. Check email exist (giữ nguyên)
-  const isExist = await userService.findOne({ email: userBody.email }, { lean: true });
-  if (isExist) {
+  // 1. Kiểm tra Email tồn tại (giữ nguyên logic cũ)
+  // Lưu ý: userService.isEmailTaken là function trong user.model static,
+  // nhưng nếu bạn dùng userService.findOne như code cũ thì dùng logic dưới đây:
+  if (await userService.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
-  const { email, phone, password, referralCode } = userBody;
+  // Tách referralCode ra để xử lý riêng
+  const { referralCode: inputReferralCode, ...userData } = userBody;
+
   const isAdmin = subdomain === 'admin';
   const role = isAdmin ? 'admin' : 'customer';
 
-  let referredByUser = null;
-  if (referralCode && referralCode.trim()) {
-    referredByUser = await userService.findOne(
-      {
-        referralCode: referralCode.trim().toUpperCase(),
-        isActive: true,
-        isEmailVerified: true,
-      },
-      { lean: true }
-    );
+  // 2. Tạo User (Chỉ chứa thông tin xác thực, KHÔNG chứa referral)
+  const user = await userService.create({
+    email: userData.email,
+    password: userData.password,
+    phone: userData.phone,
+    role,
+    isEmailVerified: false,
+    isActive: true,
+  });
 
-    if (!referredByUser) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Mã giới thiệu không hợp lệ');
-    }
+  // 3. Tạo Profile tương ứng
 
-    if (referredByUser.email === email) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Không thể sử dụng mã giới thiệu của chính bạn');
-    }
+  const dataProfile = {
+    ...userBody,
+    user: user._id,
+  };
+
+  // Chuẩn hóa mảng emails/phones (giữ nguyên logic của bạn)
+  if (userBody.email) {
+    dataProfile.emails = [{ type: 'Other', value: userBody.email, isPrimary: true }];
+  }
+  if (userBody.phone) {
+    dataProfile.phones = [{ type: 'Other', value: userBody.phone, isPrimary: true }];
   }
 
-  let newUser;
+  if (isAdmin) {
+    await employeeService.create(dataProfile);
+  } else {
+    // --- LOGIC REFERRAL SYSTEM (CHỈ DÀNH CHO CUSTOMER) ---
 
-  try {
-    const newUserReferralCode = await generateUniqueReferralCode(email);
+    let referredByCustomerId = null;
 
-    const userData = {
-      email,
-      phone,
-      password,
-      role,
-      isEmailVerified: false,
-      profileType: isAdmin ? 'Employee' : 'Customer',
-      referralCode: newUserReferralCode,
-    };
+    // A. Xử lý mã người giới thiệu (nếu có)
+    if (inputReferralCode && inputReferralCode.trim()) {
+      // Tìm Customer sở hữu mã này (Tìm trong Customer, KHÔNG phải User)
+      const referrer = await Customer.findOne({
+        referralCode: inputReferralCode.trim().toUpperCase(),
+        isDeleted: { $ne: true },
+      });
 
-    // Thêm referredBy nếu có người giới thiệu
-    if (referredByUser) {
-      userData.referredBy = referredByUser._id;
-    }
-
-    newUser = await userService.create(userData);
-
-    // 3. Chuẩn bị data cho Profile
-    // QUAN TRỌNG: Phải gán User ID vào đây
-    const dataProfile = {
-      ...userBody,
-      user: newUser._id,
-    };
-
-    // Chuẩn hóa mảng emails/phones (giữ nguyên logic của bạn)
-    if (userBody.email) {
-      dataProfile.emails = [{ type: 'Other', value: userBody.email, isPrimary: true }];
-    }
-    if (userBody.phone) {
-      dataProfile.phones = [{ type: 'Other', value: userBody.phone, isPrimary: true }];
-    }
-
-    // 4. Tạo Profile
-    try {
-      let profileDoc;
-      if (isAdmin) {
-        // Gọi create của base service (hoặc sửa lại create của EmployeeService để đơn giản hơn)
-        // Lưu ý: dataProfile đã có field 'user', nên Employee sẽ lưu được ref
-        profileDoc = await employeeService.create(dataProfile);
+      if (referrer) {
+        // Kiểm tra logic tự giới thiệu bản thân (nếu cần thiết, dù user mới chưa có code)
+        // Với user mới tinh thì không sợ trùng code cũ, nhưng check cho chắc
+        referredByCustomerId = referrer.id;
       } else {
-        profileDoc = await customerService.create(dataProfile);
+        // Tùy chọn: Báo lỗi nếu mã sai HOẶC lờ đi.
+        // Thường thì nên báo lỗi để user biết mã sai.
+        throw new ApiError(httpStatus.BAD_REQUEST, 'Mã giới thiệu không hợp lệ');
       }
-
-      // 5. Update ngược lại User để link profile
-      newUser.profile = profileDoc._id;
-      await newUser.save(); // Lưu lại user với profile id
-    } catch (profileError) {
-      // Rollback: Xóa user nếu tạo profile lỗi
-      await userService.deleteHardById(newUser._id); // Đảm bảo hàm này tồn tại hoặc dùng User.findByIdAndDelete
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Không thể tạo hồ sơ: ${profileError.message}`);
     }
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Không thể đăng ký: ${error.message}`);
+
+    // B. Tạo mã giới thiệu mới cho khách hàng này
+    const newMyReferralCode = await generateUniqueReferralCode(userData.email);
+
+    // C. Tạo Customer Profile
+    await customerService.create({
+      ...dataProfile,
+
+      // Các trường Referral mới
+      referralCode: newMyReferralCode, // Mã của chính họ
+      referredBy: referredByCustomerId, // ID của Customer giới thiệu (nếu có)
+    });
   }
 
-  return newUser;
+  return user;
 };
 
 /**
@@ -128,7 +116,7 @@ const login = async (username, password) => {
     $or: [{ email: username }, { phone: username }],
   });
   if (!user || !(await user.isPasswordMatch(password))) {
-    throw new ApiError(httpStatus.UNAUTHORIZED, 'Incorrect email or password');
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Email hoặc mật khẩu không chính xác');
   }
   return user;
 };

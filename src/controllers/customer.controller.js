@@ -10,6 +10,7 @@ class CustomerController extends BaseController {
     super(customerService);
 
     this.updateProfile = catchAsync(this.updateProfile.bind(this));
+    this.getReferral = catchAsync(this.getReferral.bind(this));
   }
 
   async updateProfile(req, res) {
@@ -37,6 +38,25 @@ class CustomerController extends BaseController {
     }
 
     res.status(OK).json(newData);
+  }
+
+  async getReferral(req, res) {
+    const customerId = req.profile ? req.profile._id || req.profile.id || req.profile : null;
+
+    if (!customerId) {
+      return res.status(OK).json({
+        results: [],
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+        totalResults: 0,
+      });
+    }
+
+    const result = await this.service.paginate({
+      referredBy: customerId,
+    });
+    return res.status(OK).json(result);
   }
 }
 
