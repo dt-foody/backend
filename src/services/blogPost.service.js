@@ -13,7 +13,7 @@ class BlogPostService extends BaseService {
    * @returns {Promise<Array<{ category: string, slug: string, posts: [] }>>}
    */
   async groupByCategory(query = {}) {
-    const limit = query.limit || 2;
+    const limit = query.limit || 20;
 
     const conditions = {
       isDeleted: false,
