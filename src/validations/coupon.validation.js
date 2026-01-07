@@ -9,9 +9,9 @@ const create = {
       description: Joi.string().allow('', null),
       code: Joi.string().allow('', null),
 
-      type: Joi.string().valid('discount_code', 'freeship', 'gift').default('discount_code'),
+      type: Joi.string().valid('discount_code', 'freeship', 'referral').default('discount_code'),
       value: Joi.number().min(0).required(),
-      valueType: Joi.string().valid('fixed_amount', 'percentage').default('fixed_amount'),
+      valueType: Joi.string().valid('fixed_amount', 'percentage', 'gift_item').default('fixed_amount'),
       maxDiscountAmount: Joi.number().min(0).default(0),
       minOrderAmount: Joi.number().min(0).default(0),
 
@@ -80,9 +80,9 @@ const updateById = {
       name: Joi.string(),
       description: Joi.string().allow('', null),
       code: Joi.string().allow('', null),
-      type: Joi.string().valid('discount_code', 'freeship', 'gift'),
+      type: Joi.string().valid('discount_code', 'freeship', 'referral'),
       value: Joi.number().min(0),
-      valueType: Joi.string().valid('fixed_amount', 'percentage'),
+      valueType: Joi.string().valid('fixed_amount', 'percentage', 'gift_item'),
       maxDiscountAmount: Joi.number().min(0),
       minOrderAmount: Joi.number().min(0),
 

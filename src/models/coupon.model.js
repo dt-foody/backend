@@ -44,13 +44,13 @@ const CouponSchema = new Schema(
     // --- Loại coupon ---
     type: {
       type: String,
-      enum: ['discount_code', 'freeship', 'gift'],
+      enum: ['discount_code', 'freeship', 'referral'],
       default: 'discount_code',
     },
 
     // --- Quy tắc giảm giá ---
     value: { type: Number, default: 0 },
-    valueType: { type: String, enum: ['fixed_amount', 'percentage'], default: 'fixed_amount' },
+    valueType: { type: String, enum: ['fixed_amount', 'percentage', 'gift_item'], default: 'fixed_amount' },
 
     giftItems: {
       type: [giftItemSchema],
