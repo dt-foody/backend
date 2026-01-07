@@ -15,6 +15,21 @@ const create = {
       maxDiscountAmount: Joi.number().min(0).default(0),
       minOrderAmount: Joi.number().min(0).default(0),
 
+      giftItems: Joi.array()
+        .items(
+          Joi.object().keys({
+            itemId: Joi.string().required(), // ID sản phẩm/combo
+            name: Joi.string().allow('', null).default(''),
+            type: Joi.string().required().valid('Product', 'Combo'),
+            price: Joi.number().min(0).required(),
+          })
+        )
+        .when('valueType', {
+          is: 'gift_item',
+          then: Joi.array().min(1).required(), // Nếu là gift_item thì BẮT BUỘC phải có ít nhất 1 món
+          otherwise: Joi.array().default([]), // Các trường hợp khác thì cho phép rỗng
+        }),
+
       startDate: Joi.date().required(),
       endDate: Joi.date().required(),
 
@@ -70,6 +85,15 @@ const updateById = {
       valueType: Joi.string().valid('fixed_amount', 'percentage'),
       maxDiscountAmount: Joi.number().min(0),
       minOrderAmount: Joi.number().min(0),
+
+      giftItems: Joi.array().items(
+        Joi.object().keys({
+          itemId: Joi.string().required(),
+          name: Joi.string().allow('', null).default(''),
+          type: Joi.string().required().valid('Product', 'Combo'),
+          price: Joi.number().min(0).required(),
+        })
+      ),
 
       startDate: Joi.date(),
       endDate: Joi.date(),
