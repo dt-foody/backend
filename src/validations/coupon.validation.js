@@ -18,9 +18,9 @@ const create = {
       giftItems: Joi.array()
         .items(
           Joi.object().keys({
-            itemId: Joi.string().required(), // ID sản phẩm/combo
+            item: Joi.string().required(), // ID sản phẩm/combo
+            itemType: Joi.string().required().valid('Product', 'Combo'),
             name: Joi.string().allow('', null).default(''),
-            type: Joi.string().required().valid('Product', 'Combo'),
             price: Joi.number().min(0).required(),
           })
         )
@@ -88,9 +88,9 @@ const updateById = {
 
       giftItems: Joi.array().items(
         Joi.object().keys({
-          itemId: Joi.string().required(),
+          item: Joi.string().required(),
+          itemType: Joi.string().required().valid('Product', 'Combo'),
           name: Joi.string().allow('', null).default(''),
-          type: Joi.string().required().valid('Product', 'Combo'),
           price: Joi.number().min(0).required(),
         })
       ),
