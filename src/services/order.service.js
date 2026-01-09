@@ -269,6 +269,67 @@ class OrderService extends BaseService {
     );
   }
 
+  // [NEW] Helper: Xây dựng Order Item từ cấu hình quà tặng (Gift Items)
+  static async buildGiftItems(giftRequests) {
+    if (!giftRequests || giftRequests.length === 0) return [];
+
+    const builtGifts = await Promise.all(
+      giftRequests.map(async (gift) => {
+        // gift: { item: id, itemType: 'Product'|'Combo', quantity: 1, price: 0, sourceCouponCode: '...' }
+        const quantity = gift.quantity || 1;
+        const price = gift.price || 0; // Giá được cấu hình từ coupon (0 hoặc giá ưu đãi)
+
+        if (gift.itemType === 'Product') {
+          const product = await Product.findById(gift.item);
+          if (!product) {
+            logger.warn(`Gift Product not found: ${gift.item}`);
+            return null;
+          }
+          return {
+            item: product._id,
+            itemType: 'Product',
+            name: product.name,
+            quantity,
+            originalBasePrice: product.basePrice,
+            basePrice: price, // Với quà tặng, basePrice coi như bằng giá bán ưu đãi
+            price, // Giá cuối cùng
+            options: [],
+            comboSelections: [],
+            note: `Quà tặng từ mã: ${gift.sourceCouponCode || ''}`,
+            promotion: null,
+            isGift: true, // Marker để phân biệt
+          };
+        }
+
+        if (gift.itemType === 'Combo') {
+          const combo = await Combo.findById(gift.item);
+          if (!combo) {
+            logger.warn(`Gift Combo not found: ${gift.item}`);
+            return null;
+          }
+          // Với Combo quà tặng, hiện tại chưa hỗ trợ options phức tạp, lấy mặc định
+          return {
+            item: combo._id,
+            itemType: 'Combo',
+            name: combo.name,
+            quantity,
+            originalBasePrice: combo.comboPrice || 0,
+            basePrice: price,
+            price,
+            options: [],
+            comboSelections: [], // Giả sử quà tặng combo không cần chọn món
+            note: `Quà tặng từ mã: ${gift.sourceCouponCode || ''}`,
+            promotion: null,
+            isGift: true,
+          };
+        }
+        return null;
+      })
+    );
+
+    return builtGifts.filter((g) => g !== null);
+  }
+
   static buildOrderItemsFromSnapshot(items) {
     if (!Array.isArray(items)) return [];
     return items.map((cartItem) => {
@@ -310,11 +371,12 @@ class OrderService extends BaseService {
   }
 
   /* ============================================================
-   * 2. LOGIC TÍNH DISCOUNT
+   * 2. LOGIC TÍNH DISCOUNT & COLLECT GIFTS
    * ============================================================ */
   static async calculateTotalDiscount({ coupons = [], vouchers = [], orderTotal = 0 }) {
     let totalDiscountAmount = 0;
     const appliedDocs = [];
+    const giftRequests = []; // [NEW] Danh sách quà tặng cần thêm vào đơn
     const now = new Date();
 
     const calculateAmount = (valueType, value, maxDiscount, total) => {
@@ -324,13 +386,14 @@ class OrderService extends BaseService {
         if (maxDiscount && maxDiscount > 0) {
           amount = Math.min(amount, maxDiscount);
         }
-      } else {
+      } else if (valueType === 'fixed_amount') {
         amount = value;
       }
+      // 'gift_item' thường không giảm tiền trực tiếp, nhưng nếu có value thì vẫn tính
       return amount;
     };
 
-    // A. COUPONS
+    // A. COUPONS (Bao gồm Referral & Gift)
     if (Array.isArray(coupons) && coupons.length > 0) {
       for (const c of coupons) {
         const doc = await Coupon.findOne({
@@ -348,8 +411,22 @@ class OrderService extends BaseService {
         if (doc.maxUses > 0 && doc.usedCount >= doc.maxUses) continue;
         if (doc.minOrderAmount > 0 && orderTotal < doc.minOrderAmount) continue;
 
+        // Tính giảm giá tiền (nếu có)
         const amount = calculateAmount(doc.valueType, doc.value, doc.maxDiscountAmount, orderTotal);
         totalDiscountAmount += amount;
+
+        // [NEW] Thu thập Gift Items nếu có
+        if (doc.giftItems && doc.giftItems.length > 0) {
+          doc.giftItems.forEach((gift) => {
+            giftRequests.push({
+              item: gift.item,
+              itemType: gift.itemType, // Product / Combo
+              quantity: gift.quantity || 1,
+              price: gift.price || 0, // Giá admin set (0 hoặc > 0)
+              sourceCouponCode: doc.code,
+            });
+          });
+        }
 
         appliedDocs.push({
           code: doc.code,
@@ -380,6 +457,21 @@ class OrderService extends BaseService {
         const amount = calculateAmount(snapshot.type, snapshot.value, snapshot.maxDiscount, orderTotal);
         totalDiscountAmount += amount;
 
+        // [NEW] Logic Gift cho Voucher (nếu voucher snapshot giữ info gift)
+        // Hiện tại Voucher snapshot thường chỉ lưu value, nếu cần gift từ voucher phải populate sâu hơn
+        // Ở đây giả định voucher follow theo coupon cha nếu coupon cha có gift
+        if (doc.coupon && doc.coupon.giftItems && doc.coupon.giftItems.length > 0) {
+          doc.coupon.giftItems.forEach((gift) => {
+            giftRequests.push({
+              item: gift.item,
+              itemType: gift.itemType,
+              quantity: gift.quantity || 1,
+              price: gift.price || 0,
+              sourceCouponCode: doc.code,
+            });
+          });
+        }
+
         appliedDocs.push({
           code: doc.code,
           name: doc.coupon?.name || doc.code,
@@ -393,7 +485,7 @@ class OrderService extends BaseService {
     }
 
     totalDiscountAmount = Math.min(totalDiscountAmount, orderTotal);
-    return { appliedDocs, totalDiscountAmount };
+    return { appliedDocs, totalDiscountAmount, giftRequests };
   }
 
   /* ============================================================
@@ -402,11 +494,13 @@ class OrderService extends BaseService {
   async prepareOrderData(payload, { useMenuPrice = true, isApplySurcharge = true } = {}) {
     const { items, coupons = [], vouchers = [] } = payload;
 
-    const orderItems = useMenuPrice
+    // 1. Build Regular Items
+    const regularItems = useMenuPrice
       ? await OrderService.buildOrderItemsFromMenu(items)
       : OrderService.buildOrderItemsFromSnapshot(items);
 
-    const totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
+    // Tính tạm totalAmount của items thường để check điều kiện coupon
+    const regularTotal = regularItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
 
     let calculatedSurchargeAmount = 0;
     let surcharges = [];
@@ -420,25 +514,36 @@ class OrderService extends BaseService {
       });
     }
 
-    const { appliedDocs, totalDiscountAmount } = await OrderService.calculateTotalDiscount({
+    // 2. Calculate Discount & Get Gift Requests
+    const { appliedDocs, totalDiscountAmount, giftRequests } = await OrderService.calculateTotalDiscount({
       coupons,
       vouchers,
-      orderTotal: totalAmount,
+      orderTotal: regularTotal,
     });
 
+    // 3. [NEW] Build Gift Items & Merge
+    let finalOrderItems = [...regularItems];
+    if (giftRequests && giftRequests.length > 0) {
+      const giftItems = await OrderService.buildGiftItems(giftRequests);
+      finalOrderItems = [...finalOrderItems, ...giftItems];
+    }
+
+    // 4. [UPDATE] Recalculate Total Amount (Bao gồm giá của Gift Items nếu có giá > 0)
+    const finalTotalAmount = finalOrderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
+
     const shippingFee = typeof payload.shippingFee === 'number' ? payload.shippingFee : 0;
-    const grandTotal = Math.max(0, totalAmount - totalDiscountAmount + shippingFee + calculatedSurchargeAmount);
+    const grandTotal = Math.max(0, finalTotalAmount - totalDiscountAmount + shippingFee + calculatedSurchargeAmount);
 
     const orderCode = payload.orderCode || Date.now();
     const deliveryTime = payload.deliveryTime || { option: 'immediate', scheduledAt: null };
 
     const data = {
       ...payload,
-      items: orderItems,
+      items: finalOrderItems, // Danh sách items bao gồm cả quà tặng
       appliedCoupons: appliedDocs,
       surcharges: appliedSurcharges, // Lưu chi tiết phụ thu vào đơn hàng
       surchargeAmount: calculatedSurchargeAmount, // Tổng tiền phụ thu
-      totalAmount,
+      totalAmount: finalTotalAmount, // Tổng tiền hàng (Regular + Gift)
       discountAmount: totalDiscountAmount,
       shippingFee,
       grandTotal,
