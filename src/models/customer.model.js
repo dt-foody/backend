@@ -103,8 +103,16 @@ const CustomerSchema = new Schema(
     // 2. Người đã giới thiệu khách hàng này
     referredBy: {
       type: Schema.Types.ObjectId,
-      ref: 'Customer', // <--- QUAN TRỌNG: Ref tới bảng Customer, không phải User
-      index: true, // Index để truy vấn: "Ai đã được giới thiệu bởi ông A?"
+      ref: 'Customer',
+    },
+
+    referrerSuccessfulInvites: {
+      type: Number,
+      default: 0,
+    },
+
+    referralCodeSuccessAt: {
+      type: Date,
     },
   },
   { timestamps: true }

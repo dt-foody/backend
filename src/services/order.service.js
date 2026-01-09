@@ -573,7 +573,32 @@ class OrderService extends BaseService {
 
     try {
       if (order.profileType === 'Customer') {
+        // Cập nhật cho chính khách hàng
         await Customer.findByIdAndUpdate(order.profile, updateData);
+
+        // --- LOGIC REFERRAL ---
+        // Kiểm tra xem khách này có được mời bởi ai không
+        const customer = await Customer.findById(order.profile);
+        if (customer && customer.referredBy) {
+          // Kiểm tra đã có đơn thành công trước đó chưa
+          const orderCount = await Order.countDocuments({
+            profile: customer._id,
+            profileType: 'Customer',
+            status: 'completed',
+          });
+          if (orderCount === 1) {
+            // Đơn đầu tiên thành công
+            // Tăng referrerSuccessfulInvites cho người giới thiệu
+            const inviteLog = { customer: customer._id, at: new Date() };
+            await Customer.findByIdAndUpdate(customer.referredBy, {
+              $inc: { referrerSuccessfulInvites: 1 },
+            });
+            // Lưu thời điểm referralCode được tính ở User B (chỉ 1 field)
+            await Customer.findByIdAndUpdate(customer._id, {
+              $set: { referralCodeSuccessAt: inviteLog.at },
+            });
+          }
+        }
       } else if (order.profileType === 'Employee') {
         await Employee.findByIdAndUpdate(order.profile, updateData);
       }

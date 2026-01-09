@@ -100,7 +100,7 @@ const AppliedCouponSchema = new Schema(
       enum: ['Coupon', 'Voucher'], // Chỉ chấp nhận 2 model này
     },
 
-    discountType: { type: String, enum: ['fixed_amount', 'percentage', 'freeship'], required: true },
+    discountType: { type: String, enum: ['fixed_amount', 'percentage', 'gift_item'], required: true },
     discountValue: { type: Number, default: 0 }, // Giá trị gốc (VD: 10%)
     amount: { type: Number, required: true, min: 0 }, // Số tiền thực tế giảm (VD: 15.000)
   },

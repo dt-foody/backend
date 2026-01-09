@@ -71,6 +71,15 @@ const RESOLVER_DEFS = {
     },
     isUserDependent: false,
   },
+  // --- REFERRAL/REWARD ---
+  referrer_successful_invites: {
+    fn: (context) => context?.user?.profile?.referrerSuccessfulInvites || 0,
+    isUserDependent: true,
+  },
+  is_referred_new_customer: {
+    fn: (context) => !!context?.user?.profile?.referredBy,
+    isUserDependent: true,
+  },
 };
 
 // Helper để lấy resolver function nhanh gọn
