@@ -9,6 +9,7 @@ const CategorySchema = new Schema(
     description: { type: String, default: '' },
     image: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
+    showInMenu: { type: Boolean, default: false },
     priority: { type: Number, default: 0 },
     parent: { type: Schema.Types.ObjectId, ref: 'Category', default: null },
     ancestors: [{ type: Schema.Types.ObjectId, ref: 'Category' }],

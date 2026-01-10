@@ -53,6 +53,15 @@ const dealSettingSchema = mongoose.Schema(
       type: dealOptionConfigSchema,
       default: () => ({}),
     },
+
+    flashSale: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
+    combo: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
   },
   {
     timestamps: true,

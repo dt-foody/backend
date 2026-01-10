@@ -20,6 +20,9 @@ const create = {
     scheduledDelivery: dealOptionConfig,
     cashPayment: dealOptionConfig,
     bankTransfer: dealOptionConfig,
+
+    flashSale: dealOptionConfig,
+    combo: dealOptionConfig,
   }),
 };
 
@@ -47,6 +50,9 @@ const updateById = {
       scheduledDelivery: dealOptionConfig,
       cashPayment: dealOptionConfig,
       bankTransfer: dealOptionConfig,
+
+      flashSale: dealOptionConfig,
+      combo: dealOptionConfig,
     })
     .min(1),
 };
