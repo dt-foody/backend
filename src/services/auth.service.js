@@ -4,7 +4,7 @@ const tokenService = require('./token.service');
 const userService = require('./user.service');
 const customerService = require('./customer.service');
 const employeeService = require('./employee.service');
-const { Token, Customer } = require('../models');
+const { Token, Customer, User } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
 
@@ -28,7 +28,7 @@ const register = async (subdomain, userBody) => {
   // 1. Kiểm tra Email tồn tại (giữ nguyên logic cũ)
   // Lưu ý: userService.isEmailTaken là function trong user.model static,
   // nhưng nếu bạn dùng userService.findOne như code cũ thì dùng logic dưới đây:
-  if (await userService.isEmailTaken(userBody.email)) {
+  if (await User.isEmailTaken(userBody.email)) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
