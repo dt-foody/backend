@@ -106,7 +106,7 @@ class OrderService extends BaseService {
   /* ============================================================
    * 1. BUILD ITEMS
    * ============================================================ */
-  static async buildOrderItemsFromMenu(items) {
+  static async buildOrderItemsFromMenu(profile, items) {
     const now = new Date();
 
     const findActivePromotion = async (itemId, type = 'product') => {
@@ -121,11 +121,39 @@ class OrderService extends BaseService {
 
       const promotion = await PricePromotion.findOne(query).sort({ priority: -1 });
       if (!promotion) return null;
+
+      // 1. Check giới hạn Global (Tổng hệ thống)
       if (promotion.maxQuantity > 0 && promotion.usedQuantity >= promotion.maxQuantity) return null;
+
+      // 2. Check giới hạn theo Ngày
       if (promotion.dailyMaxUses > 0) {
         const isSameDay = promotion.lastUsedDate && new Date(promotion.lastUsedDate).toDateString() === now.toDateString();
         if (isSameDay && promotion.dailyUsedCount >= promotion.dailyMaxUses) return null;
       }
+
+      // 3. Check giới hạn theo User (Chỉ check khi có config và có user)
+      if (promotion.maxQuantityPerCustomer > 0 && profile) {
+        const usageStats = await Order.aggregate([
+          {
+            $match: {
+              profile: new mongoose.Types.ObjectId(profile),
+              status: { $nin: ['canceled', 'refunded'] }, // Không tính đơn huỷ
+              'items.promotion': promotion._id,
+            },
+          },
+          { $unwind: '$items' },
+          { $match: { 'items.promotion': promotion._id } },
+          { $group: { _id: null, total: { $sum: '$items.quantity' } } },
+        ]);
+
+        const usedCount = usageStats.length > 0 ? usageStats[0].total : 0;
+
+        // Nếu đã dùng quá giới hạn -> Không áp dụng khuyến mãi này nữa
+        if (usedCount >= promotion.maxQuantityPerCustomer) {
+          return null;
+        }
+      }
+
       return promotion;
     };
 
@@ -374,7 +402,7 @@ class OrderService extends BaseService {
   /* ============================================================
    * 2. LOGIC TÍNH DISCOUNT & COLLECT GIFTS
    * ============================================================ */
-  static async calculateTotalDiscount({ coupons = [], vouchers = [], orderTotal = 0 }) {
+  static async calculateTotalDiscount({ profile, coupons = [], vouchers = [], orderTotal = 0 }) {
     let totalDiscountAmount = 0;
     const appliedDocs = [];
     const giftRequests = []; // [NEW] Danh sách quà tặng cần thêm vào đơn
@@ -409,8 +437,32 @@ class OrderService extends BaseService {
           logger.warn(`Coupon invalid: ${c.code}`);
           continue;
         }
+
+        // 2. Check Global Limit (Tổng hệ thống) - Có sẵn trong doc, check nhanh
         if (doc.maxUses > 0 && doc.usedCount >= doc.maxUses) continue;
+
+        // 3. Check Min Order Amount - Check nhanh
         if (doc.minOrderAmount > 0 && orderTotal < doc.minOrderAmount) continue;
+
+        // 🔥 4. Check User Limit (Chỉ query DB khi cần thiết)
+        if (doc.maxUsesPerUser > 0) {
+          // Nếu coupon yêu cầu check limit mà không có user -> Bỏ qua (hoặc throw error tuỳ nghiệp vụ)
+          if (!profile) continue;
+
+          const profileId = profile._id || profile.id;
+
+          // Sử dụng countDocuments sẽ nhẹ hơn aggregate trong trường hợp đếm đơn giản này
+          const usedCount = await Order.countDocuments({
+            profile: new mongoose.Types.ObjectId(profileId),
+            status: { $nin: ['canceled', 'refunded'] }, // Không tính đơn huỷ
+            'appliedCoupons.code': doc.code, // Chỉ đếm đúng mã này
+          });
+
+          if (usedCount >= doc.maxUsesPerUser) {
+            // User đã hết lượt -> Bỏ qua coupon này
+            continue;
+          }
+        }
 
         // Tính giảm giá tiền (nếu có)
         const amount = calculateAmount(doc.valueType, doc.value, doc.maxDiscountAmount, orderTotal);
@@ -493,11 +545,11 @@ class OrderService extends BaseService {
    * 3. PREPARE DATA
    * ============================================================ */
   async prepareOrderData(payload, { useMenuPrice = true, isApplySurcharge = true } = {}) {
-    const { items, coupons = [], vouchers = [] } = payload;
+    const { profile, items, coupons = [], vouchers = [] } = payload;
 
     // 1. Build Regular Items
     const regularItems = useMenuPrice
-      ? await OrderService.buildOrderItemsFromMenu(items)
+      ? await OrderService.buildOrderItemsFromMenu(profile, items)
       : OrderService.buildOrderItemsFromSnapshot(items);
 
     // Tính tạm totalAmount của items thường để check điều kiện coupon
@@ -517,6 +569,7 @@ class OrderService extends BaseService {
 
     // 2. Calculate Discount & Get Gift Requests
     const { appliedDocs, totalDiscountAmount, giftRequests } = await OrderService.calculateTotalDiscount({
+      profile,
       coupons,
       vouchers,
       orderTotal: regularTotal,
