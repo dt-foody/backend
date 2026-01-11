@@ -87,6 +87,9 @@ class MenuController {
       const userUsedCount = userPromoUsageMap.get(pIdStr) || 0;
       const isLimitReachedForUser = promo.maxQuantityPerCustomer > 0 && userUsedCount >= promo.maxQuantityPerCustomer;
 
+      if (isLimitReachedForUser) {
+        return null;
+      }
       return {
         ...promo.toObject(),
         id: pIdStr,
