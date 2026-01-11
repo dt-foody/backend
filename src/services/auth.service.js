@@ -4,7 +4,7 @@ const tokenService = require('./token.service');
 const userService = require('./user.service');
 const customerService = require('./customer.service');
 const employeeService = require('./employee.service');
-const { Token, Customer, User } = require('../models');
+const { Token } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
 
@@ -25,84 +25,83 @@ const generateUniqueReferralCode = async (email) => {
  * @returns {Promise<User>}
  */
 const register = async (subdomain, userBody) => {
-  // 1. Kiểm tra Email tồn tại (giữ nguyên logic cũ)
-  // Lưu ý: userService.isEmailTaken là function trong user.model static,
-  // nhưng nếu bạn dùng userService.findOne như code cũ thì dùng logic dưới đây:
-  if (await User.isEmailTaken(userBody.email)) {
+  // 1. Check email tồn tại (giữ logic cũ)
+  const isExist = await userService.findOne({ email: userBody.email }, { lean: true });
+  if (isExist) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
-  // Tách referralCode ra để xử lý riêng
-  const { referralCode: inputReferralCode, ...userData } = userBody;
+  const { email, phone, password, referralCode } = userBody;
 
   const isAdmin = subdomain === 'admin';
   const role = isAdmin ? 'admin' : 'customer';
 
-  // 2. Tạo User (Chỉ chứa thông tin xác thực, KHÔNG chứa referral)
-  const user = await userService.create({
-    email: userData.email,
-    password: userData.password,
-    phone: userData.phone,
-    role,
-    isEmailVerified: false,
-    isActive: true,
-  });
+  // 2. Validate referral TRƯỚC (giống code cũ)
+  let referredByCustomer = null;
 
-  // 3. Tạo Profile tương ứng
-
-  const dataProfile = {
-    ...userBody,
-    user: user._id,
-  };
-
-  // Chuẩn hóa mảng emails/phones (giữ nguyên logic của bạn)
-  if (userBody.email) {
-    dataProfile.emails = [{ type: 'Other', value: userBody.email, isPrimary: true }];
-  }
-  if (userBody.phone) {
-    dataProfile.phones = [{ type: 'Other', value: userBody.phone, isPrimary: true }];
-  }
-
-  if (isAdmin) {
-    await employeeService.create(dataProfile);
-  } else {
-    // --- LOGIC REFERRAL SYSTEM (CHỈ DÀNH CHO CUSTOMER) ---
-
-    let referredByCustomerId = null;
-
-    // A. Xử lý mã người giới thiệu (nếu có)
-    if (inputReferralCode && inputReferralCode.trim()) {
-      // Tìm Customer sở hữu mã này (Tìm trong Customer, KHÔNG phải User)
-      const referrer = await Customer.findOne({
-        referralCode: inputReferralCode.trim().toUpperCase(),
+  if (!isAdmin && referralCode && referralCode.trim()) {
+    referredByCustomer = await customerService.findOne(
+      {
+        referralCode: referralCode.trim().toUpperCase(),
         isDeleted: { $ne: true },
-      });
+      },
+      { lean: true }
+    );
 
-      if (referrer) {
-        // Kiểm tra logic tự giới thiệu bản thân (nếu cần thiết, dù user mới chưa có code)
-        // Với user mới tinh thì không sợ trùng code cũ, nhưng check cho chắc
-        referredByCustomerId = referrer.id;
-      } else {
-        // Tùy chọn: Báo lỗi nếu mã sai HOẶC lờ đi.
-        // Thường thì nên báo lỗi để user biết mã sai.
-        throw new ApiError(httpStatus.BAD_REQUEST, 'Mã giới thiệu không hợp lệ');
-      }
+    if (!referredByCustomer) {
+      throw new ApiError(httpStatus.BAD_REQUEST, 'Mã giới thiệu không hợp lệ');
+    }
+  }
+
+  let newUser;
+
+  try {
+    // 3. Tạo User (KHÔNG profile, KHÔNG referral)
+    newUser = await userService.create({
+      email,
+      phone,
+      password,
+      role,
+      isEmailVerified: false,
+      isActive: true,
+    });
+
+    // 4. Chuẩn bị data profile
+    const dataProfile = {
+      ...userBody,
+      user: newUser._id,
+    };
+
+    if (email) {
+      dataProfile.emails = [{ type: 'Other', value: email, isPrimary: true }];
+    }
+    if (phone) {
+      dataProfile.phones = [{ type: 'Other', value: phone, isPrimary: true }];
     }
 
-    // B. Tạo mã giới thiệu mới cho khách hàng này
-    const newMyReferralCode = await generateUniqueReferralCode(userData.email);
+    // 5. Tạo profile theo role
+    if (isAdmin) {
+      await employeeService.create(dataProfile);
+    } else {
+      const myReferralCode = await generateUniqueReferralCode(email);
 
-    // C. Tạo Customer Profile
-    await customerService.create({
-      ...dataProfile,
+      await customerService.create({
+        ...dataProfile,
+        referralCode: myReferralCode,
+        referredBy: referredByCustomer ? referredByCustomer._id : null,
+      });
+    }
+  } catch (error) {
+    // Rollback user nếu có lỗi profile
+    if (newUser?._id) {
+      await userService.deleteHardById(newUser._id);
+    }
 
-      // Các trường Referral mới
-      referralCode: newMyReferralCode, // Mã của chính họ
-      referredBy: referredByCustomerId, // ID của Customer giới thiệu (nếu có)
-    });
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Không thể đăng ký: ${error.message}`);
   }
 
-  return user;
+  return newUser;
 };
 
 /**

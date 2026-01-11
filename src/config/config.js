@@ -33,6 +33,8 @@ const envVarsSchema = Joi.object()
     STORE_LAT: Joi.number().default(21.01932585883329).description('Store Latitude'), // Ví dụ: Chợ Bến Thành
     STORE_LNG: Joi.number().default(105.82209012013686).description('Store Longitude'),
     BACKEND_URL: Joi.string().description('Backend URL'),
+    EMAIL_URL_RESET_PASSWORD: Joi.string().description('Frontend URL for reset password email link'),
+    EMAIL_URL_VERIFICATION: Joi.string().description('Frontend URL for email verification link'),
   })
   .unknown();
 
@@ -85,5 +87,9 @@ module.exports = {
       lat: envVars.STORE_LAT,
       lng: envVars.STORE_LNG,
     },
+  },
+  emailUrls: {
+    resetPassword: envVars.EMAIL_URL_RESET_PASSWORD,
+    verifyEmail: envVars.EMAIL_URL_VERIFICATION,
   },
 };

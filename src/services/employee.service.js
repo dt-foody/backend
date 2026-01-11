@@ -34,14 +34,6 @@ class EmployeeService extends BaseService {
 
     const employeeRecord = await this.model.create(employeeData);
 
-    // --- BƯỚC 3: CẬP NHẬT NGƯỢC LẠI USER (NẾU CẦN) ---
-    if (userId) {
-      await User.findByIdAndUpdate(userId, {
-        profile: employeeRecord._id,
-        profileType: 'Employee',
-      });
-    }
-
     return this.model.findById(employeeRecord._id).populate('user');
   }
 
@@ -73,11 +65,9 @@ class EmployeeService extends BaseService {
           throw new ApiError(BAD_REQUEST, 'Email đã được sử dụng');
         }
 
-        // Tạo User mới (đảm bảo link ngược về employee này)
+        // Tạo User mới
         const newUserPayload = {
           ...userData,
-          profile: employee._id, // Link ngược về Employee
-          profileType: 'Employee',
         };
 
         const newUser = await User.create(newUserPayload);

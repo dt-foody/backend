@@ -41,7 +41,8 @@ class CustomerController extends BaseController {
   }
 
   async getReferral(req, res) {
-    const customerId = req.profile ? req.profile._id || req.profile.id || req.profile : null;
+    const { profile } = req;
+    const customerId = profile ? profile._id || profile.id : null;
 
     if (!customerId) {
       return res.status(OK).json({

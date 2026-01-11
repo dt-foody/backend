@@ -15,7 +15,7 @@ class CouponController extends BaseController {
   async available(req, res) {
     const { orderValue } = req.query;
     // req.user sẽ null nếu guest, middleware auth phải để 'optional'
-    const result = await this.service.getAvailableCoupons(req.user, Number(orderValue) || 0);
+    const result = await this.service.getAvailableCoupons(req, Number(orderValue) || 0);
     res.status(OK).json(result);
   }
 

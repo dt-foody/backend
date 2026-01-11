@@ -46,15 +46,6 @@ const userSchema = new Schema(
       type: Boolean,
       default: false,
     },
-    profileType: {
-      type: String,
-      required: true,
-      enum: ['Customer', 'Employee'], // chỉ 2 loại được phép
-    },
-    profile: {
-      type: Schema.Types.ObjectId,
-      refPath: 'profileType', // 🔥 dynamic ref
-    },
   },
   {
     timestamps: true,

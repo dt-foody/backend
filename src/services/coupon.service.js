@@ -12,11 +12,13 @@ class CouponService extends BaseService {
 
   /**
    * Lấy coupon khả dụng (Public + Private)
-   * @param {Object} user
+   * @param {Object} req
    * @param {Number} orderValue
    * @param {Array} orderItems
    */
-  async getAvailableCoupons(user, orderValue = 0, orderItems = []) {
+  async getAvailableCoupons(req, orderValue = 0, orderItems = []) {
+    const { user, profile, profileType } = req;
+
     const now = new Date();
 
     // Context cho evaluator
@@ -77,12 +79,11 @@ class CouponService extends BaseService {
       };
     });
 
-    if (!user || !user.profile) return formattedPublic;
+    if (!user || !profile) return formattedPublic;
 
     // 2. Get Private Vouchers
-    // Lấy voucher của user (Đã lưu hoặc được tặng)
     const vouchers = await Voucher.find({
-      profile: user.profile.id || user.profile._id || user.profile,
+      profile: profile.id || profile._id,
       status: 'UNUSED',
       expiredAt: { $gte: now },
     })

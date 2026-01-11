@@ -4,7 +4,9 @@ const path = require('path');
 const handlebars = require('handlebars');
 const config = require('../config/config');
 const logger = require('../config/logger');
-const { User } = require('../models/index');
+const { User, Customer, Employee } = require('../models/index');
+
+const { emailUrls } = config;
 
 const transport = nodemailer.createTransport(config.email.smtp);
 
@@ -84,7 +86,7 @@ const sendEmail = async (to, subject, text, html) => {
  */
 const sendResetPasswordEmail = async (to, token) => {
   const subject = 'Hỗ trợ đặt lại mật khẩu cho tài khoản Lưu Chi';
-  const resetPasswordUrl = `https://luuchi.com.vn/vi/forgot-password?token=${token}`;
+  const resetPasswordUrl = `${emailUrls.resetPassword}${token}`;
 
   const payload = {
     // Header
@@ -99,11 +101,16 @@ const sendResetPasswordEmail = async (to, token) => {
     expirationText: `${config.jwt.resetPasswordExpirationMinutes} phút`,
   };
 
-  if (to) {
-    const user = await User.findOne({ email: to }).populate('profile');
+  let profile = null;
 
+  if (to) {
+    const user = await User.findOne({ email: to });
     if (user) {
-      payload.fullName = user.profile?.name;
+      profile = (await Customer.findOne({ user: user._id })) || (await Employee.findOne({ user: user._id }));
+    }
+
+    if (profile) {
+      payload.fullName = profile?.name;
     }
   }
 
@@ -120,7 +127,7 @@ const sendResetPasswordEmail = async (to, token) => {
  */
 const sendVerificationEmail = async (profileName, to, token) => {
   const subject = 'Lưu Chi gửi bạn món quà chào mừng đầu tiên!';
-  const verificationEmailUrl = `https://luuchi.com.vn/vi/verify-email?token=${token}`;
+  const verificationEmailUrl = `${emailUrls.verifyEmail}${token}`;
   // const userName = to.split('@')[0]; // Lấy tên từ email nếu chưa có tên thật
 
   // Đọc file src/templates/email/verification.hbs
