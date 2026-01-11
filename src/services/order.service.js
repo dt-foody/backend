@@ -21,15 +21,15 @@ class OrderService extends BaseService {
   }
 
   /**
-   * Lấy bản đồ số lượng sử dụng Promotion của User (Chỉ tính đơn thành công)
+   * Lấy bản đồ số lượng sử dụng Promotion của User
    * @param {string} userId
    * @param {string[]} relevantPromoIds - Chỉ các ID có maxQuantityPerCustomer > 0
    * @returns {Promise<Map<string, number>>}
    */
-  async getUserPromotionUsageMap(userId, relevantPromoIds) {
+  async getUserPromotionUsageMap(user, profile, relevantPromoIds) {
     const usageMap = new Map();
 
-    if (!userId || !relevantPromoIds || relevantPromoIds.length === 0) {
+    if (!user || !profile || !relevantPromoIds || relevantPromoIds.length === 0) {
       return usageMap;
     }
 
@@ -39,9 +39,7 @@ class OrderService extends BaseService {
     const stats = await this.model.aggregate([
       {
         $match: {
-          item: new mongoose.Types.ObjectId(userId),
-          // Chỉ tính các trạng thái đơn hàng "có hiệu lực" (đã xác nhận hoặc thành công)
-          status: { $in: ['confirmed', 'delivered', 'completed'] },
+          profile: new mongoose.Types.ObjectId(profile._id || profile.id),
         },
       },
       { $unwind: '$items' },

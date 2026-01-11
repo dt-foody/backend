@@ -40,12 +40,12 @@ class MenuController {
   }
 
   async getMenu(req, res) {
-    const userId = req.user ? req.user.id : null;
+    const { user, profile } = req;
     const now = new Date();
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    if (!userId && publicMenuCache.data && now - publicMenuCache.timestamp < 60000) {
+    if (!user && publicMenuCache.data && now - publicMenuCache.timestamp < 60000) {
       return res.status(OK).json(publicMenuCache.data);
     }
 
@@ -65,8 +65,8 @@ class MenuController {
     const promoIdsToVerify = rawPromotions.filter((p) => p.maxQuantityPerCustomer > 0).map((p) => p.id.toString());
 
     let userPromoUsageMap = new Map();
-    if (userId && promoIdsToVerify.length > 0) {
-      userPromoUsageMap = await orderService.getUserPromotionUsageMap(userId, promoIdsToVerify);
+    if (user && promoIdsToVerify.length > 0) {
+      userPromoUsageMap = await orderService.getUserPromotionUsageMap(user, profile, promoIdsToVerify);
     }
 
     const productPromoMap = new Map();
@@ -92,7 +92,7 @@ class MenuController {
         id: pIdStr,
         userUsedCount,
         isLimitReachedForUser,
-        requiresLogin: !userId && promo.maxQuantityPerCustomer > 0,
+        requiresLogin: !user && promo.maxQuantityPerCustomer > 0,
       };
     };
 
@@ -173,7 +173,7 @@ class MenuController {
       descriptionCombo: (dealSetting && dealSetting.combo && dealSetting.combo.value && dealSetting.combo.note) || '',
     };
 
-    if (!userId) publicMenuCache = { data: responseData, timestamp: now.getTime() };
+    if (!user) publicMenuCache = { data: responseData, timestamp: now.getTime() };
     res.status(OK).json(responseData);
   }
 }
