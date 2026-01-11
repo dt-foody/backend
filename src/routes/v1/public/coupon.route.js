@@ -1,6 +1,7 @@
 const express = require('express');
 const validate = require('../../../middlewares/validate');
 const { auth, authOptional } = require('../../../middlewares/auth');
+const { attachProfile } = require('../../../middlewares/attachProfile');
 const couponValidation = require('../../../validations/coupon.validation');
 const couponController = require('../../../controllers/coupon.controller');
 const queryMiddleware = require('../../../middlewares/queryMiddleware');
@@ -46,7 +47,7 @@ function paginate(req, res, next) {
 const router = express.Router();
 
 router.get('/', validate(couponValidation.paginate), queryMiddleware, paginate, couponController.paginate);
-router.get('/available', authOptional(), queryMiddleware, couponController.available);
+router.get('/available', authOptional(), attachProfile, queryMiddleware, couponController.available);
 router.post('/claim', auth(), couponController.claim); // permission tùy bạn đặt
 
 module.exports = router;

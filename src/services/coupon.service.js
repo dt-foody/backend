@@ -1,8 +1,9 @@
 /* eslint-disable no-unused-vars */
+const mongoose = require('mongoose');
 const _ = require('lodash');
 const BaseService = require('../utils/_base.service');
 const { evaluateConditions, requiresUserContext } = require('../utils/conditionEvaluator');
-const { Coupon, Voucher } = require('../models');
+const { Coupon, Voucher, Order } = require('../models');
 
 class CouponService extends BaseService {
   constructor() {
@@ -39,45 +40,97 @@ class CouponService extends BaseService {
       })
       .lean();
 
-    const formattedPublic = publicCoupons.map((c) => {
-      let isApplicable = true;
-      let reason = null;
+    // [FIX LOGIC] 1a. Kiểm tra lịch sử sử dụng của User với danh sách Public Coupons này
+    const usageMap = {};
+    if (user && profile && publicCoupons.length > 0) {
+      const couponCodes = publicCoupons.map((c) => c.code);
+      const profileId = profile.id || profile._id;
 
-      const hasConditions =
-        c.conditions &&
-        c.conditions.conditions &&
-        Array.isArray(c.conditions.conditions) &&
-        c.conditions.conditions.length > 0;
+      // Đếm số lần profile này đã dùng các mã trên trong các đơn thành công
+      const usageStats = await Order.aggregate([
+        {
+          $match: {
+            profile: new mongoose.Types.ObjectId(profileId), // Cast về ObjectId để match chính xác
+            status: { $ne: 'canceled' }, // Không tính đơn đã hủy
+            'appliedCoupons.code': { $in: couponCodes },
+          },
+        },
+        { $unwind: '$appliedCoupons' }, // Tách mảng coupon để filter
+        {
+          $match: {
+            'appliedCoupons.code': { $in: couponCodes },
+          },
+        },
+        {
+          $group: {
+            _id: '$appliedCoupons.code', // Group theo mã coupon
+            count: { $sum: 1 }, // Đếm số lần xuất hiện
+          },
+        },
+      ]);
 
-      if (hasConditions) {
-        const needsUser = requiresUserContext(c.conditions);
-        if (needsUser && !user) {
+      // Map kết quả về dạng Object cho dễ tra cứu: { 'SALE50': 1, 'FREESHIP': 2 }
+      usageStats.forEach((stat) => {
+        usageMap[stat._id] = stat.count;
+      });
+    }
+
+    const formattedPublic = publicCoupons
+      .map((c) => {
+        let isApplicable = true;
+        let reason = null;
+
+        // [FIX LOGIC] 1b. Validate maxUsesPerUser
+        const userUsedCount = usageMap[c.code] || 0;
+        if (c.maxUsesPerUser > 0 && userUsedCount >= c.maxUsesPerUser) {
           isApplicable = false;
-          reason = 'LOGIN_REQUIRED';
-        } else {
-          const passed = evaluateConditions(c.conditions, context);
-          if (!passed) {
+          reason = 'MAX_USES_PER_USER_REACHED';
+        }
+
+        // Check điều kiện động (Conditions)
+        const hasConditions =
+          c.conditions &&
+          c.conditions.conditions &&
+          Array.isArray(c.conditions.conditions) &&
+          c.conditions.conditions.length > 0;
+
+        // Chỉ check conditions nếu các điều kiện cơ bản ở trên đã pass
+        if (isApplicable && hasConditions) {
+          const needsUser = requiresUserContext(c.conditions);
+          if (needsUser && !user) {
             isApplicable = false;
-            reason = 'CONDITIONS_NOT_MET';
+            reason = 'LOGIN_REQUIRED';
+          } else {
+            const passed = evaluateConditions(c.conditions, context);
+            if (!passed) {
+              isApplicable = false;
+              reason = 'CONDITIONS_NOT_MET';
+            }
           }
         }
-      }
 
-      if (orderValue < c.minOrderAmount) {
-        isApplicable = false;
-        reason = reason || 'MIN_ORDER_AMOUNT_NOT_MET';
-      }
+        // Check giá trị đơn hàng tối thiểu
+        if (isApplicable && orderValue < c.minOrderAmount) {
+          isApplicable = false;
+          reason = reason || 'MIN_ORDER_AMOUNT_NOT_MET';
+        }
 
-      return {
-        ...c,
-        id: c._id,
-        _id: undefined,
-        couponScope: 'PUBLIC',
-        isClaimed: false,
-        isApplicable,
-        inapplicableReason: reason,
-      };
-    });
+        return {
+          ...c,
+          id: c._id,
+          _id: undefined,
+          couponScope: 'PUBLIC',
+          isClaimed: false,
+          isApplicable,
+          inapplicableReason: reason,
+          userUsage: {
+            used: userUsedCount,
+            limit: c.maxUsesPerUser,
+          },
+        };
+      })
+      // [NEW] Filter bỏ các coupon đã hết lượt dùng cá nhân để không hiện lên UI
+      .filter((c) => c.inapplicableReason !== 'MAX_USES_PER_USER_REACHED');
 
     if (!user || !profile) return formattedPublic;
 

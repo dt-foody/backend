@@ -40,6 +40,9 @@ class OrderService extends BaseService {
       {
         $match: {
           profile: new mongoose.Types.ObjectId(profile._id || profile.id),
+          status: {
+            $nin: ['canceled', 'refunded'],
+          },
         },
       },
       { $unwind: '$items' },
