@@ -14,10 +14,10 @@ class CustomerController extends BaseController {
   }
 
   async updateProfile(req, res) {
-    const { user, body } = req;
+    const { profileType, user, body } = req;
 
     let newData;
-    if (user.profileType === 'Customer') {
+    if (profileType === 'Customer') {
       newData = await this.service.updateOne(
         {
           user: user._id || user.id,

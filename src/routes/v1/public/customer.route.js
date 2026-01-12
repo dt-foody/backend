@@ -7,7 +7,7 @@ const { attachProfile } = require('../../../middlewares/attachProfile');
 
 const router = express.Router();
 
-router.patch('/', validate(customerValidation.updateProfile), auth(), customerController.updateProfile);
+router.patch('/', validate(customerValidation.updateProfile), auth(), attachProfile, customerController.updateProfile);
 router.get('/referral', auth(), attachProfile, customerController.getReferral);
 
 module.exports = router;
