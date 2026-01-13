@@ -24,7 +24,7 @@ const CategorySchema = new Schema(
 // ======================================================
 // ==================  PLUGINS  ==========================
 // ======================================================
-CategorySchema.index({ name: 1, parent: 1 }, { unique: true });
+CategorySchema.index({ name: 1, parent: 1 });
 CategorySchema.plugin(toJSON);
 CategorySchema.plugin(paginate);
 
