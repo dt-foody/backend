@@ -2,6 +2,15 @@ const queryMiddleware = (req, res, next) => {
   const { populate, sortBy, select } = req.query;
   let { page = 1, limit = 20 } = req.query;
 
+  // ===== 1. Xác định scope theo subdomain =====
+  const hostname = req.hostname || '';
+
+  let scope = 'user'; // default
+
+  if (hostname.startsWith('admin.')) {
+    scope = 'admin';
+  }
+
   // Chuyển đổi kiểu dữ liệu
   page = parseInt(page, 10);
   limit = parseInt(limit, 10);
@@ -34,6 +43,7 @@ const queryMiddleware = (req, res, next) => {
     page,
     limit,
     sortBy,
+    scope,
   };
 
   if (populate) {

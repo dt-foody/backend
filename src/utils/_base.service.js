@@ -12,7 +12,7 @@ class BaseService {
     return this.model.countDocuments(query);
   }
 
-  async findAll(query = {}, options = { sortBy: '', populate: '', select: '', lean: false, limit: 20 }) {
+  async findAll(query = {}, options = { sortBy: '', populate: '', select: '', lean: false, limit: 20, scope: 'user' }) {
     // Tạo một bản sao của query để tránh sửa đổi tham số đầu vào
     const modifiedQuery = { ...query };
 
@@ -25,7 +25,7 @@ class BaseService {
       modifiedQuery.isEnabled = true;
     }
 
-    if (this.model.schema.path('isActive') && modifiedQuery.isActive === undefined) {
+    if (options.scope === 'user' && this.model.schema.path('isActive') && modifiedQuery.isActive === undefined) {
       modifiedQuery.isActive = true;
     }
 
@@ -94,7 +94,7 @@ class BaseService {
     return dbQuery;
   }
 
-  async paginate(query = {}, options = { page: 1, limit: 20, lean: true }) {
+  async paginate(query = {}, options = { page: 1, limit: 20, lean: true, scope: 'user' }) {
     const modifiedQuery = { ...query };
 
     if (this.model.schema.path('isDeleted') && modifiedQuery.isDeleted === undefined) {
@@ -105,7 +105,8 @@ class BaseService {
       modifiedQuery.isEnabled = true;
     }
 
-    if (this.model.schema.path('isActive') && modifiedQuery.isActive === undefined) {
+    // isActive: CHỈ áp cho USER
+    if (options.scope === 'user' && this.model.schema.path('isActive') && modifiedQuery.isActive === undefined) {
       modifiedQuery.isActive = true;
     }
 

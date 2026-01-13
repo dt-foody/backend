@@ -31,8 +31,6 @@ class BaseController {
 
     delete req.query.search;
 
-    console.log("query", req.query);
-
     const data = await this.service.paginate(req.query, req.options);
 
     res.status(httpStatus.OK).json(data);
