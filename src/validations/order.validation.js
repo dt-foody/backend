@@ -257,6 +257,8 @@ const paginateOrders = {
     limit: Joi.number().min(1).default(10),
     page: Joi.number().min(1).default(1),
     populate: Joi.string(),
+    deliveryFrom: Joi.date().iso(),
+    deliveryTo: Joi.date().iso(),
   }),
 };
 

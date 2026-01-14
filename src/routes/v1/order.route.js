@@ -3,9 +3,8 @@ const { orderController } = require('../../controllers/index');
 const { orderValidation } = require('../../validations/index');
 const { auth } = require('../../middlewares/auth'); // Import auth middleware
 const validate = require('../../middlewares/validate');
-
 function list(req, res, next) {
-  const { status, paymentStatus, shippingStatus, deliveryType, search } = req.query;
+  const { status, paymentStatus, shippingStatus, deliveryType, search, deliveryFrom, deliveryTo } = req.query;
   if (paymentStatus) {
     req.query['payment.status'] = paymentStatus;
     delete req.query.paymentStatus;
@@ -29,6 +28,23 @@ function list(req, res, next) {
       $in: status.split(','),
     };
   }
+
+  if (deliveryFrom && deliveryTo) {
+    const from = new Date(deliveryFrom);
+    from.setUTCHours(0, 0, 0, 0);
+
+    const to = new Date(deliveryTo);
+    to.setUTCHours(23, 59, 59, 999);
+
+    req.query.priorityTime = {
+      $gte: from,
+      $lte: to,
+    };
+
+    delete req.query.deliveryFrom;
+    delete req.query.deliveryTo;
+  }
+
 
   next();
 }
