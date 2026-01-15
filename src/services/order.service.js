@@ -545,7 +545,7 @@ class OrderService extends BaseService {
    * 3. PREPARE DATA
    * ============================================================ */
   async prepareOrderData(payload, { useMenuPrice = true, isApplySurcharge = true } = {}) {
-    const { profile, items, coupons = [], vouchers = [] } = payload;
+    const { orderType, profile, items, coupons = [], vouchers = [] } = payload;
 
     // 1. Build Regular Items
     const regularItems = useMenuPrice
@@ -559,7 +559,7 @@ class OrderService extends BaseService {
     let surcharges = [];
     let appliedSurcharges = [];
 
-    if (isApplySurcharge) {
+    if (orderType !== 'TakeAway' && isApplySurcharge) {
       surcharges = await Surcharge.find({ isActive: true });
       appliedSurcharges = surcharges.map((s) => {
         calculatedSurchargeAmount += s.cost;
