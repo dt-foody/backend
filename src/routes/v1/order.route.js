@@ -3,6 +3,7 @@ const { orderController } = require('../../controllers/index');
 const { orderValidation } = require('../../validations/index');
 const { auth } = require('../../middlewares/auth'); // Import auth middleware
 const validate = require('../../middlewares/validate');
+
 function list(req, res, next) {
   const { status, paymentStatus, shippingStatus, deliveryType, search, deliveryFrom, deliveryTo } = req.query;
   if (paymentStatus) {
@@ -44,7 +45,6 @@ function list(req, res, next) {
     delete req.query.deliveryFrom;
     delete req.query.deliveryTo;
   }
-
 
   next();
 }
