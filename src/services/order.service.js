@@ -798,61 +798,89 @@ class OrderService extends BaseService {
     const existing = await this.model.findById(id);
     if (!existing) throw new Error('Order không tồn tại');
 
+    // Snapshot dữ liệu cũ để ghi log
     const oldOrderSnapshot = existing.toObject();
 
-    const orderItems = Array.isArray(payload.items)
-      ? OrderService.buildOrderItemsFromSnapshot(payload.items)
-      : existing.items || [];
+    // 1. Khởi tạo updateDoc từ payload (Mặc định cập nhật những gì gửi lên)
+    const updateDoc = { ...payload };
 
-    const totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
+    // Cờ đánh dấu cần tính lại GrandTotal
+    let shouldRecalculateGrandTotal = false;
 
-    let appliedDocs = existing.appliedCoupons || [];
-    let totalDiscountAmount = existing.discountAmount || 0;
+    // Helper: Lấy giá trị ưu tiên từ updateDoc (nếu có thay đổi), ngược lại lấy từ existing
+    const getVal = (key) => (key in updateDoc ? updateDoc[key] : existing[key]);
 
+    // 2. Xử lý ITEMS (Nếu có gửi items mới)
+    if (payload.items && Array.isArray(payload.items)) {
+      const orderItems = OrderService.buildOrderItemsFromSnapshot(payload.items);
+      updateDoc.items = orderItems;
+      // Tính lại tổng tiền hàng
+      updateDoc.totalAmount = orderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
+      shouldRecalculateGrandTotal = true;
+    }
+
+    // 3. Xử lý PROMOTION (Nếu có gửi coupons hoặc vouchers)
     if (payload.coupons || payload.vouchers) {
       const coupons = payload.coupons || [];
       const vouchers = payload.vouchers || [];
-      const result = await OrderService.calculateTotalDiscount({ coupons, vouchers, orderTotal: totalAmount });
-      appliedDocs = result.appliedDocs;
-      totalDiscountAmount = result.totalDiscountAmount;
+      // Lấy totalAmount hiện tại (mới hoặc cũ) để tính giảm giá
+      const currentOrderTotal = getVal('totalAmount');
+
+      const result = await OrderService.calculateTotalDiscount({
+        coupons,
+        vouchers,
+        orderTotal: currentOrderTotal,
+      });
+
+      updateDoc.appliedCoupons = result.appliedDocs;
+      updateDoc.discountAmount = result.totalDiscountAmount;
+      shouldRecalculateGrandTotal = true;
     }
 
-    const shippingFee = typeof payload.shippingFee === 'number' ? payload.shippingFee : existing.shippingFee || 0;
+    // 4. Xử lý PAYMENT (Merge object thay vì ghi đè nếu muốn giữ data cũ trong payment)
+    if (payload.payment) {
+      updateDoc.payment = { ...existing.payment, ...payload.payment };
+    }
 
-    const updateDoc = {
-      ...payload,
-      items: orderItems,
-      appliedCoupons: appliedDocs,
-      totalAmount,
-      discountAmount: totalDiscountAmount,
-      grandTotal: Math.max(0, totalAmount - totalDiscountAmount + shippingFee),
-      payment: payload.payment ? { ...existing.payment, ...payload.payment } : existing.payment,
-    };
+    // 5. Kiểm tra các thay đổi về phí ship hoặc phụ thu để trigger tính lại GrandTotal
+    if ('shippingFee' in payload || 'surchargeAmount' in payload) {
+      shouldRecalculateGrandTotal = true;
+    }
 
+    // 6. Tính toán lại GRAND TOTAL (Chỉ chạy khi các thành phần giá thay đổi)
+    if (shouldRecalculateGrandTotal) {
+      const total = getVal('totalAmount') || 0;
+      const discount = getVal('discountAmount') || 0;
+      const ship = getVal('shippingFee') || 0;
+      const surcharge = getVal('surchargeAmount') || 0;
+
+      updateDoc.grandTotal = Math.max(0, total - discount + ship + surcharge);
+    }
+
+    // Thực hiện Update
     const order = await this.model.findByIdAndUpdate(id, updateDoc, { new: true });
 
-    // Kiểm tra nếu trạng thái chuyển sang 'completed' (và trước đó chưa phải completed)
+    // Trigger thống kê nếu trạng thái đổi sang completed
     if (payload.status === 'completed' && existing.status !== 'completed') {
       await OrderService.updateProfileStats(order);
     }
 
-    // --- [ADD] Ghi Log Thay Đổi ---
-    // Gọi service AuditLog để tự động so sánh oldOrderSnapshot và order mới
+    // Ghi Log Audit
     try {
       await auditLogService.logChange({
         targetModel: 'Order',
         targetId: order._id,
         oldData: oldOrderSnapshot,
         newData: order.toObject(),
-        performer: user, // User lấy từ Controller truyền xuống
+        performer: user,
         action: 'UPDATE',
-        note: payload.noteChange || '', // Nếu admin gửi kèm lý do sửa
+        note: payload.noteChange || '',
       });
     } catch (logErr) {
       logger.error(`Failed to log order update for ${id}:`, logErr);
     }
 
-    return { message: 'Admin đã cập nhật đơn thành công.', order };
+    return { message: 'Cập nhật đơn hàng thành công.', order };
   }
 
   async generatePayOSQR({ amount, orderCode, description }) {
