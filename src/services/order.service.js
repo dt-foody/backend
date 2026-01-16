@@ -9,6 +9,8 @@ const logger = require('../config/logger');
 const { getDistanceInKm } = require('../utils/map.util');
 const { calculateShippingFeeByFormula } = require('../utils/shipping.util');
 
+const auditLogService = require('./auditLog.service');
+
 class OrderService extends BaseService {
   constructor() {
     super(Order);
@@ -689,14 +691,25 @@ class OrderService extends BaseService {
   /* ============================================================
    * 5. CONTROLLER ACTIONS
    * ============================================================ */
-  async customerOrder(payload) {
+  async customerOrder(payload, user = null) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true, isApplySurcharge: true });
     const order = await this.model.create(orderData);
 
     try {
       await OrderService.updatePromotionUsage(orderData.items);
-      // 🔥 Gọi hàm update đã sửa logic
       await OrderService.updateDiscountsUsage(orderData.appliedCoupons);
+
+      // --- [ADD] Ghi Log Tạo Đơn ---
+      // Lưu ý: user ở đây là Customer thực hiện đặt hàng
+      auditLogService.logChange({
+        targetModel: 'Order',
+        targetId: order._id,
+        oldData: null,
+        newData: order.toObject(),
+        performer: user || payload.profile, // Nếu không có user object thì lấy ID profile
+        action: 'CREATE',
+        note: 'Khách hàng tạo đơn mới',
+      });
     } catch (e) {
       logger.error('Error updating usage stats:', e);
     }
@@ -763,15 +776,29 @@ class OrderService extends BaseService {
     }
   }
 
-  async adminPanelCreateOrder(payload) {
+  async adminPanelCreateOrder(payload, user = null) {
     const orderData = await this.prepareOrderData(payload, { useMenuPrice: true, isApplySurcharge: false });
     const order = await this.model.create(orderData);
+
+    // --- [ADD] Ghi Log Admin Tạo Đơn ---
+    auditLogService.logChange({
+      targetModel: 'Order',
+      targetId: order._id,
+      oldData: null,
+      newData: order.toObject(),
+      performer: user,
+      action: 'CREATE',
+      note: 'Admin tạo đơn thủ công',
+    });
+
     return { message: 'Admin đã tạo đơn thành công.', order };
   }
 
-  async adminPanelUpdateOrder(id, payload) {
+  async adminPanelUpdateOrder(id, payload, user = null) {
     const existing = await this.model.findById(id);
     if (!existing) throw new Error('Order không tồn tại');
+
+    const oldOrderSnapshot = existing.toObject();
 
     const orderItems = Array.isArray(payload.items)
       ? OrderService.buildOrderItemsFromSnapshot(payload.items)
@@ -804,12 +831,26 @@ class OrderService extends BaseService {
 
     const order = await this.model.findByIdAndUpdate(id, updateDoc, { new: true });
 
-    // --- LOGIC MỚI THÊM VÀO ---
     // Kiểm tra nếu trạng thái chuyển sang 'completed' (và trước đó chưa phải completed)
     if (payload.status === 'completed' && existing.status !== 'completed') {
       await OrderService.updateProfileStats(order);
     }
-    // ---------------------------
+
+    // --- [ADD] Ghi Log Thay Đổi ---
+    // Gọi service AuditLog để tự động so sánh oldOrderSnapshot và order mới
+    try {
+      await auditLogService.logChange({
+        targetModel: 'Order',
+        targetId: order._id,
+        oldData: oldOrderSnapshot,
+        newData: order.toObject(),
+        performer: user, // User lấy từ Controller truyền xuống
+        action: 'UPDATE',
+        note: payload.noteChange || '', // Nếu admin gửi kèm lý do sửa
+      });
+    } catch (logErr) {
+      logger.error(`Failed to log order update for ${id}:`, logErr);
+    }
 
     return { message: 'Admin đã cập nhật đơn thành công.', order };
   }

@@ -18,3 +18,4 @@ module.exports.blogTagValidation = require('./blogTag.validation');
 module.exports.surchargeValidation = require('./surcharge.validation');
 module.exports.dealSettingValidation = require('./dealSetting.validation');
 module.exports.layoutSettingValidation = require('./layoutSetting.validation');
+module.exports.auditLogValidation = require('./auditLog.validation');

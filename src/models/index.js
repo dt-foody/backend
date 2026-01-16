@@ -19,3 +19,4 @@ module.exports.PayOSWebhookLog = require('./payOSWebhookLog.model');
 module.exports.Surcharge = require('./surcharge.model');
 module.exports.DealSetting = require('./dealSetting.model');
 module.exports.LayoutSetting = require('./layoutSetting.model');
+module.exports.AuditLog = require('./auditLog.model');

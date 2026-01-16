@@ -25,13 +25,19 @@ class BaseRoute {
   }
 
   registerRoute(method, path, permission, validationSchema, middlewares, handler) {
-    this.router[method](
-      path,
-      auth(`${this.resource}.${permission}`), // phải đăng nhập mới xài được api
-      validate(validationSchema), // ràng buộc dữ liệu
-      ...(middlewares || []), // middlewares --> custom (tuỳ chỉnh)
-      handler
-    );
+    // Kiểm tra this.resource thay vì resource
+    if (this.resource) {
+      this.router[method](
+        path,
+        auth(`${this.resource}.${permission}`), // Chỉ Auth khi có Resource
+        validate(validationSchema), // Chỉ Validate khi có Resource (theo logic snippet của bạn)
+        ...(middlewares || []),
+        handler
+      );
+    } else {
+      // Trường hợp không có resource (Route public hoặc custom)
+      this.router[method](path, ...(middlewares || []), handler);
+    }
   }
 
   initializeRoutes() {

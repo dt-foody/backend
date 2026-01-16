@@ -22,6 +22,7 @@ const menuRoute = require('./menu.route');
 const surchargeRoute = require('./surcharge.route');
 const dealSettingRoute = require('./dealSetting.route');
 const layoutSettingRoute = require('./layoutSetting.route');
+const auditLogRoute = require('./auditLog.route');
 
 const router = express.Router();
 
@@ -109,6 +110,10 @@ const defaultRoutes = [
   {
     path: '/layout-settings',
     route: layoutSettingRoute,
+  },
+  {
+    path: '/audit-logs',
+    route: auditLogRoute,
   },
 ];
 

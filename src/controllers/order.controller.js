@@ -24,7 +24,7 @@ class OrderController extends BaseController {
     data.profile = profile ? profile._id || profile.id : null;
     data.createdBy = user ? user._id || user.id : null;
 
-    const result = await this.service.customerOrder(data);
+    const result = await this.service.customerOrder(data, user);
     return res.status(OK).json(result);
   }
 
@@ -33,7 +33,7 @@ class OrderController extends BaseController {
 
     data.createdBy = req.user._id || req.user.id;
 
-    const result = await this.service.adminPanelCreateOrder(data);
+    const result = await this.service.adminPanelCreateOrder(data, req.user);
     return res.status(OK).json(result);
   }
 
@@ -41,7 +41,7 @@ class OrderController extends BaseController {
     const { id } = req.params;
     const data = { ...req.body };
 
-    const result = await this.service.adminPanelUpdateOrder(id, data);
+    const result = await this.service.adminPanelUpdateOrder(id, data, req.user);
     return res.status(OK).json(result);
   }
 
