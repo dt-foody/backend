@@ -179,6 +179,8 @@ class OrderService extends BaseService {
           const discountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo) * applyQuantity;
           const finalPrice = Math.max(0, priceBeforePromo * cartItem.quantity - discountAmount);
 
+          console.log("Final Price Calculation:", cartItem.item.name, finalPrice, applyQuantity);
+
           return {
             item: product._id,
             itemType: 'Product',
