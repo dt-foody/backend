@@ -18,3 +18,4 @@ module.exports.BlogTag = require('./blogTag.model');
 module.exports.PayOSWebhookLog = require('./payOSWebhookLog.model');
 module.exports.Surcharge = require('./surcharge.model');
 module.exports.DealSetting = require('./dealSetting.model');
+module.exports.LayoutSetting = require('./layoutSetting.model');

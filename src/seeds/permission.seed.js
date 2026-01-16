@@ -27,6 +27,7 @@ const PERMISSIONS = {
   pos: ['create', 'update', 'delete', 'read'],
   surcharge: ['create', 'update', 'delete', 'read'],
   dealSettings: ['create', 'update', 'delete', 'read'],
+  layoutSettings: ['create', 'update', 'delete', 'read'],
 };
 
 // Hàm tạo danh sách permissions theo resource/action
