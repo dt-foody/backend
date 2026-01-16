@@ -1,14 +1,28 @@
 const mongoose = require('mongoose');
+const http = require('http');
 const app = require('./app');
 const config = require('./config/config');
 const logger = require('./config/logger');
 
+const { initSocket } = require('./config/socket');
+
 let server;
+
+// 1. Tạo HTTP Server từ Express App
+const httpServer = http.createServer(app);
+
+// 2. Gắn Socket.io vào HTTP Server này
+initSocket(httpServer);
+
 mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {
   logger.info('Connected to MongoDB');
-  server = app.listen(config.port, () => {
+
+  // --- [SỬA LẠI ĐOẠN NÀY] ---
+  // Thay vì app.listen, hãy dùng httpServer.listen
+  server = httpServer.listen(config.port, () => {
     logger.info(`Listening to port ${config.port}`);
   });
+  // --------------------------
 });
 
 const exitHandler = () => {
