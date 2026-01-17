@@ -42,7 +42,42 @@ const emitOrderUpdate = async (order) => {
   }
 };
 
+/**
+ * Bắn thông báo realtime cho danh sách user hoặc toàn bộ Admin
+ * @param {Object} notification - Document Notification vừa tạo
+ * @param {Array} receiverIds - Danh sách ID User nhận (nếu isGlobal = false)
+ */
+const emitNotification = async (notification, receiverIds = []) => {
+  try {
+    const io = getIO();
+    let targetUserIds = [];
+
+    if (notification.isGlobal) {
+      // Nếu applyAll: Tìm tất cả User có role là admin/employee hoặc nằm trong bảng Employee
+      // Giả sử logic là tìm tất cả User linked với Employee model hoặc check role
+      // Ở đây ví dụ tìm tất cả nhân viên
+      const employees = await Employee.find({ isDeleted: false }).select('user');
+      targetUserIds = employees.map((e) => e.user.toString());
+    } else {
+      targetUserIds = receiverIds.map((id) => id.toString());
+    }
+
+    // Emit event tới từng Room User
+    targetUserIds.forEach((userId) => {
+      io.to(`user-${userId}`).emit('notification_received', {
+        type: 'NOTIFICATION_NEW',
+        payload: notification,
+      });
+    });
+
+    logger.info(`Notification sent to ${targetUserIds.length} users.`);
+  } catch (error) {
+    logger.error('Socket Notification Error:', error.message);
+  }
+};
+
 module.exports = {
   emitOrderUpdate,
+  emitNotification,
   // ... các hàm khác
 };

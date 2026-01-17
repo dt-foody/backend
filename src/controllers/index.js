@@ -19,3 +19,4 @@ module.exports.surchargeController = require('./surcharge.controller');
 module.exports.dealSettingController = require('./dealSetting.controller');
 module.exports.layoutSettingController = require('./layoutSetting.controller');
 module.exports.auditLogController = require('./auditLog.controller');
+module.exports.notificationController = require('./notification.controller');

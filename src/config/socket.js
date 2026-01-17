@@ -60,6 +60,7 @@ const initSocket = (httpServer) => {
 
   // --- EVENT: CONNECTION ---
   io.on('connection', (socket) => {
+    console.log(`🔌 Socket connected: ${socket.id}`);
     // 1. Tự động Join vào Room riêng của User (nếu đã đăng nhập)
     if (socket.userId) {
       const userRoom = `user-${socket.userId}`;

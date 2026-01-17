@@ -11,6 +11,7 @@ const { emitOrderUpdate } = require('../utils/socket.util');
 const { calculateShippingFeeByFormula } = require('../utils/shipping.util');
 
 const auditLogService = require('./auditLog.service');
+const notificationService = require('./notification.service');
 
 class OrderService extends BaseService {
   constructor() {
@@ -695,7 +696,6 @@ class OrderService extends BaseService {
       await OrderService.updateDiscountsUsage(orderData.appliedCoupons);
 
       // --- [ADD] Ghi Log Tạo Đơn ---
-      // Lưu ý: user ở đây là Customer thực hiện đặt hàng
       auditLogService.logChange({
         targetModel: 'Order',
         targetId: order._id,
@@ -707,6 +707,46 @@ class OrderService extends BaseService {
       });
     } catch (e) {
       logger.error('Error updating usage stats:', e);
+    }
+
+    try {
+      // 1. Format nội dung: Tên, SĐT, Thời gian nhận
+      const customerName = order.shipping?.address?.recipientName || 'Khách lẻ';
+      const customerPhone = order.shipping?.address?.recipientPhone || '---';
+
+      let deliveryTimeStr = '';
+      if (order.deliveryTime?.option === 'scheduled' && order.deliveryTime?.scheduledAt) {
+        // Format ngày giờ: 14:30 20/10/2023
+        const date = new Date(order.deliveryTime.scheduledAt);
+
+        // Format thủ công chuẩn: HH:mm dd/MM
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+
+        deliveryTimeStr = `Giao lúc: ${hours}:${minutes} ${day}/${month}`;
+      } else {
+        deliveryTimeStr = `Giao ngay: ${new Date(order.createdAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`;
+      }
+
+      const content = `Khách: ${customerName} - SĐT: ${customerPhone}. ${deliveryTimeStr}`;
+
+      // 2. Tạo thông báo (Apply All Admin)
+      await notificationService.createNotification({
+        title: `Đơn hàng mới #${order.orderId}`,
+        content,
+        type: 'ORDER_NEW',
+        referenceId: order._id || order.id,
+        referenceModel: 'Order',
+        isGlobal: true, // Gửi cho tất cả nhân viên
+      });
+      // -----------------------------
+    } catch (error) {
+      logger.error('Error creating order notification:', error);
     }
 
     return {
