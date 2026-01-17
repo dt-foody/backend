@@ -270,14 +270,8 @@ class OrderService extends BaseService {
             activePromo = await findActivePromotion(cartItem.item.promotion);
           }
 
-          // Kiểm tra limitPerOrder
-          let applyQuantity = cartItem.quantity;
-          if (activePromo && activePromo.limitPerOrder > 0 && cartItem.quantity > activePromo.limitPerOrder) {
-            applyQuantity = activePromo.limitPerOrder;
-          }
-
-          const promoDiscountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo) * applyQuantity;
-          const finalPrice = Math.max(0, priceBeforePromo * cartItem.quantity - promoDiscountAmount);
+          const promoDiscountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo);
+          const finalPrice = Math.max(0, priceBeforePromo - promoDiscountAmount);
 
           return {
             item: combo._id,
