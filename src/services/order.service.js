@@ -7,6 +7,7 @@ const config = require('../config/config');
 const logger = require('../config/logger');
 
 const { getDistanceInKm } = require('../utils/map.util');
+const { emitOrderUpdate } = require('../utils/socket.util');
 const { calculateShippingFeeByFormula } = require('../utils/shipping.util');
 
 const auditLogService = require('./auditLog.service');
@@ -865,8 +866,10 @@ class OrderService extends BaseService {
       await OrderService.updateProfileStats(order);
     }
 
-    // Ghi Log Audit
+    // Ghi Log Audit And Socket Emit
     try {
+      emitOrderUpdate(order);
+
       await auditLogService.logChange({
         targetModel: 'Order',
         targetId: order._id,
