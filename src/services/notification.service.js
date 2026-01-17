@@ -46,15 +46,15 @@ const queryNotifications = async (user, options) => {
     const notifObj = notif.toObject();
 
     // Kiểm tra xem userId có nằm trong mảng readBy không
-    const isRead = notif.readBy && notif.readBy.some((r) => r.user.toString() === userId.toString());
-
+    const readInfo = notif.readBy && notif.readBy.find((r) => r.user.toString() === userId.toString());
     // Xóa field readBy đi cho nhẹ response (không cần thiết gửi danh sách người đã đọc về client)
     delete notifObj.readBy;
     delete notifObj.receivers;
 
     return {
       ...notifObj,
-      isRead, // true/false
+      isRead: !!readInfo, // true nếu tìm thấy readInfo
+      readAt: readInfo ? readInfo.readAt : null, // Lấy thời gian đọc hoặc null
     };
   });
 
