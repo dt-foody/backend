@@ -21,3 +21,4 @@ module.exports.DealSetting = require('./dealSetting.model');
 module.exports.LayoutSetting = require('./layoutSetting.model');
 module.exports.AuditLog = require('./auditLog.model');
 module.exports.Notification = require('./notification.model');
+module.exports.DistanceCache = require('./distanceCache.model');
