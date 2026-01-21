@@ -1,3 +1,4 @@
+/* eslint-disable no-await-in-loop */
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
@@ -146,9 +147,118 @@ const sendVerificationEmail = async (profileName, to, token) => {
   await sendEmail(to, subject, null, html);
 };
 
+const calculateDaysSinceRegistration = (createdAt) => {
+  const now = new Date();
+  const created = new Date(createdAt);
+  const diffTime = Math.abs(now - created);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+const sendReferralReminderEmail = async (user) => {
+  const subject = 'Chia sẻ “gu” của bạn – Lưu Chi gửi quà tri ân!';
+  const referralProgramUrl = `https://luuchi.com.vn/vi/`;
+
+  const payload = {
+    title: 'Chương trình giới thiệu bạn bè',
+    profileName: user.profile?.name || 'Bạn',
+    userEmail: user.email,
+    referralCode: user.referralCode,
+    referralProgramUrl,
+    registeredDays: calculateDaysSinceRegistration(user.createdAt),
+  };
+
+  const html = await getTemplate('referral-reminder.hbs', payload);
+
+  await sendEmail(user.email, subject, null, html);
+};
+
+const sendReferralRemindersToEligibleUsers = async () => {
+  // eslint-disable-next-line no-useless-catch
+  try {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - 10);
+
+    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+    // Tìm user:
+    // 1. Đăng ký cách đây 10 ngày
+    // 2. Chưa gửi thành công (isSent != true)
+    // 3. Số lần thử chưa vượt quá giới hạn (ví dụ: tối đa 3 lần thử)
+    const eligibleUsers = await Customer.find({
+      createdAt: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      },
+      'referralReminder.isSent': { $ne: true },
+      'referralReminder.sendCount': { $lt: 3 }, // [Optional] Chỉ retry tối đa 3 lần
+    });
+
+    if (eligibleUsers.length === 0) {
+      return { success: true, sent: 0, failed: 0, total: 0 };
+    }
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const user of eligibleUsers) {
+      try {
+        // Tăng số lần thử lên 1 trước (hoặc sau khi gửi đều được, ở đây ta cập nhật DB sau)
+        await sendReferralReminderEmail(user);
+
+        // --- THÀNH CÔNG ---
+        await Customer.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              'referralReminder.isSent': true,
+              'referralReminder.sentAt': new Date(),
+              'referralReminder.error': null,
+            },
+            $inc: { 'referralReminder.sendCount': 1 }, // Tăng 1 lần gửi
+          }
+        );
+
+        sentCount += 1;
+        // logger.info...
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } catch (error) {
+        failedCount += 1;
+
+        logger.error(`Failed to send referral reminder email to ${user.email}:`, error);
+
+        // --- THẤT BẠI ---
+        await Customer.updateOne(
+          { _id: user._id },
+          {
+            $set: {
+              'referralReminder.error': error.message,
+              // isSent vẫn là false để lần sau job chạy lại sẽ quét thấy
+            },
+            $inc: { 'referralReminder.sendCount': 1 }, // Vẫn tăng 1 lần thử dù lỗi
+          }
+        );
+      }
+    }
+
+    return {
+      success: true,
+      sent: sentCount,
+      failed: failedCount,
+      total: eligibleUsers.length,
+    };
+  } catch (error) {
+    logger.error('Error in sendReferralRemindersToEligibleUsers:', error);
+    return null;
+  }
+};
+
 module.exports = {
   transport,
   sendEmail,
   sendResetPasswordEmail,
   sendVerificationEmail,
+  sendReferralRemindersToEligibleUsers,
 };

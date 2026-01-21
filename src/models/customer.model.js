@@ -114,6 +114,13 @@ const CustomerSchema = new Schema(
     referralCodeSuccessAt: {
       type: Date,
     },
+
+    referralReminder: {
+      isSent: { type: Boolean, default: false }, // Đã gửi thành công chưa?
+      sentAt: { type: Date }, // Thời gian gửi thành công
+      error: { type: String }, // Lỗi lần gần nhất (nếu có)
+      sendCount: { type: Number, default: 0 }, // Số lần đã thực hiện gửi (Attempt count)
+    },
   },
   { timestamps: true }
 );
