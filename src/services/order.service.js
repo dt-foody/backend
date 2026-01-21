@@ -397,23 +397,36 @@ class OrderService extends BaseService {
   /* ============================================================
    * 2. LOGIC TÍNH DISCOUNT & COLLECT GIFTS
    * ============================================================ */
-  static async calculateTotalDiscount({ profile, coupons = [], vouchers = [], orderTotal = 0 }) {
+  static async calculateTotalDiscount({ profile, coupons = [], vouchers = [], orderTotal = 0, shippingFee = 0 }) {
     let totalDiscountAmount = 0;
     const appliedDocs = [];
     const giftRequests = []; // [NEW] Danh sách quà tặng cần thêm vào đơn
     const now = new Date();
 
-    const calculateAmount = (valueType, value, maxDiscount, total) => {
+    const calculateAmount = (valueType, value, maxDiscount, total, couponType) => {
       let amount = 0;
-      if (valueType === 'percentage') {
-        amount = Math.round(total * (value / 100));
-        if (maxDiscount && maxDiscount > 0) {
-          amount = Math.min(amount, maxDiscount);
+
+      // LOGIC XỬ LÝ FREESHIP
+      if (couponType === 'freeship') {
+        if (valueType === 'fixed_amount') {
+          // Giảm cố định nhưng không vượt quá phí ship
+          amount = Math.min(value, shippingFee);
+        } else if (valueType === 'percentage') {
+          // Giảm % phí ship (ví dụ 100% là miễn phí hoàn toàn)
+          amount = Math.round(shippingFee * (value / 100));
         }
+      }
+      // LOGIC CÁC LOẠI KHÁC (discount_code, referral...)
+      else if (valueType === 'percentage') {
+        amount = Math.round(total * (value / 100));
       } else if (valueType === 'fixed_amount') {
         amount = value;
       }
-      // 'gift_item' thường không giảm tiền trực tiếp, nhưng nếu có value thì vẫn tính
+
+      // Kiểm tra giới hạn giảm tối đa (chung cho cả freeship nếu có set maxDiscountAmount)
+      if (maxDiscount && maxDiscount > 0) {
+        amount = Math.min(amount, maxDiscount);
+      }
       return amount;
     };
 
@@ -460,7 +473,7 @@ class OrderService extends BaseService {
         }
 
         // Tính giảm giá tiền (nếu có)
-        const amount = calculateAmount(doc.valueType, doc.value, doc.maxDiscountAmount, orderTotal);
+        const amount = calculateAmount(doc.valueType, doc.value, doc.maxDiscountAmount, orderTotal, doc.type);
         totalDiscountAmount += amount;
 
         // [NEW] Thu thập Gift Items nếu có
@@ -550,6 +563,8 @@ class OrderService extends BaseService {
     // Tính tạm totalAmount của items thường để check điều kiện coupon
     const regularTotal = regularItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
 
+    const shippingFee = typeof payload.shippingFee === 'number' && orderType !== 'TakeAway' ? payload.shippingFee : 0;
+
     let calculatedSurchargeAmount = 0;
     let surcharges = [];
     let appliedSurcharges = [];
@@ -568,6 +583,7 @@ class OrderService extends BaseService {
       coupons,
       vouchers,
       orderTotal: regularTotal,
+      shippingFee,
     });
 
     // 3. [NEW] Build Gift Items & Merge
@@ -580,7 +596,10 @@ class OrderService extends BaseService {
     // 4. [UPDATE] Recalculate Total Amount (Bao gồm giá của Gift Items nếu có giá > 0)
     const finalTotalAmount = finalOrderItems.reduce((sum, it) => sum + (it.price || 0) * (it.quantity || 0), 0);
 
-    const shippingFee = typeof payload.shippingFee === 'number' ? payload.shippingFee : 0;
+    // add log here
+    logger.info(
+      `Order Total Calculation: FinalTotalAmount=${finalTotalAmount}, TotalDiscount=${totalDiscountAmount}, ShippingFee=${shippingFee}, Surcharge=${calculatedSurchargeAmount}`
+    );
     const grandTotal = Math.max(0, finalTotalAmount - totalDiscountAmount + shippingFee + calculatedSurchargeAmount);
 
     const orderCode = payload.orderCode || Date.now();

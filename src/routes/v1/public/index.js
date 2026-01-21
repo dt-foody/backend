@@ -17,6 +17,7 @@ const menuRoute = require('./menu.route');
 const surchargeRoute = require('./surcharge.route');
 const dealSettingRoute = require('./dealSetting.route');
 const layoutSettingRoute = require('./layoutSetting.route');
+const userRoute = require('./user.route');
 
 const router = express.Router();
 
@@ -24,6 +25,10 @@ const defaultRoutes = [
   {
     path: '/auth',
     route: authRoute,
+  },
+  {
+    path: '/users',
+    route: userRoute,
   },
   {
     path: '/categories',
