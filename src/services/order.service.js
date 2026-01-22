@@ -77,6 +77,9 @@ class OrderService extends BaseService {
     const storeLoc = config.hereMap.storeLocation;
     const distance = await getDistanceInKm(storeLoc, customerLocation);
     const shippingFee = calculateShippingFeeByFormula(distance, orderTime);
+
+    logger.info(`[DEBUG] Shipping Calc: Distance=${distance.toFixed(2)}km, Fee=${shippingFee}`);
+
     return { distance: parseFloat(distance.toFixed(2)), shippingFee };
   }
 
@@ -177,6 +180,10 @@ class OrderService extends BaseService {
           const discountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo);
           const finalPrice = Math.max(0, priceBeforePromo - discountAmount);
 
+          logger.info(
+            `[DEBUG] Product Item: ${product.name} | Base=${originalBasePrice} | Opts=${optionsPrice} | PromoDiscount=${discountAmount} | Final=${finalPrice}`
+          );
+
           return {
             item: product._id,
             itemType: 'Product',
@@ -273,6 +280,10 @@ class OrderService extends BaseService {
 
           const promoDiscountAmount = OrderService.calculatePromotionDiscount(priceBeforePromo, activePromo);
           const finalPrice = Math.max(0, priceBeforePromo - promoDiscountAmount);
+
+          logger.info(
+            `[DEBUG] Combo Item: ${combo.name} | Base=${priceBaseCombo} | Surcharge=${totalSurcharges} | Opts=${totalOptions} | Final=${finalPrice}`
+          );
 
           return {
             item: combo._id,
@@ -403,6 +414,10 @@ class OrderService extends BaseService {
     const giftRequests = []; // [NEW] Danh sách quà tặng cần thêm vào đơn
     const now = new Date();
 
+    logger.info(
+      `[DEBUG] Calc Discount Start: OrderTotal=${orderTotal}, ShippingFee=${shippingFee}, Coupons=${coupons.length}, Vouchers=${vouchers.length}`
+    );
+
     const calculateAmount = (valueType, value, maxDiscount, total, couponType) => {
       let amount = 0;
 
@@ -415,6 +430,10 @@ class OrderService extends BaseService {
           // Giảm % phí ship (ví dụ 100% là miễn phí hoàn toàn)
           amount = Math.round(shippingFee * (value / 100));
         }
+
+        logger.info(
+          `[DEBUG] Freeship Logic: ValType=${valueType}, Val=${value}, ShipFee=${shippingFee} => Discount=${amount}`
+        );
       }
       // LOGIC CÁC LOẠI KHÁC (discount_code, referral...)
       else if (valueType === 'percentage') {
@@ -447,15 +466,23 @@ class OrderService extends BaseService {
         }
 
         // 2. Check Global Limit (Tổng hệ thống) - Có sẵn trong doc, check nhanh
-        if (doc.maxUses > 0 && doc.usedCount >= doc.maxUses) continue;
+        if (doc.maxUses > 0 && doc.usedCount >= doc.maxUses) {
+          logger.warn(`Coupon max uses reached: ${doc.code}`);
+          continue;
+        }
 
         // 3. Check Min Order Amount - Check nhanh
-        if (doc.minOrderAmount > 0 && orderTotal < doc.minOrderAmount) continue;
+        if (doc.minOrderAmount > 0 && orderTotal < doc.minOrderAmount) {
+          logger.warn(`Coupon min order amount not met: ${doc.code}`);
+          continue;
+        }
 
         // 🔥 4. Check User Limit (Chỉ query DB khi cần thiết)
         if (doc.maxUsesPerUser > 0) {
           // Nếu coupon yêu cầu check limit mà không có user -> Bỏ qua (hoặc throw error tuỳ nghiệp vụ)
-          if (!profile) continue;
+          if (!profile) {
+            continue;
+          }
 
           const profileId = profile._id || profile.id;
 
@@ -475,6 +502,8 @@ class OrderService extends BaseService {
         // Tính giảm giá tiền (nếu có)
         const amount = calculateAmount(doc.valueType, doc.value, doc.maxDiscountAmount, orderTotal, doc.type);
         totalDiscountAmount += amount;
+
+        logger.info(`[DEBUG] Apply Coupon ${doc.code}: Type=${doc.type}, Amount=${amount}`);
 
         // [NEW] Thu thập Gift Items nếu có
         if (doc.giftItems && doc.giftItems.length > 0) {
@@ -518,6 +547,8 @@ class OrderService extends BaseService {
         const amount = calculateAmount(snapshot.type, snapshot.value, snapshot.maxDiscount, orderTotal);
         totalDiscountAmount += amount;
 
+        logger.info(`[DEBUG] Apply Voucher ${doc.code}, Amount=${amount}`);
+
         // [NEW] Logic Gift cho Voucher (nếu voucher snapshot giữ info gift)
         // Hiện tại Voucher snapshot thường chỉ lưu value, nếu cần gift từ voucher phải populate sâu hơn
         // Ở đây giả định voucher follow theo coupon cha nếu coupon cha có gift
@@ -546,6 +577,9 @@ class OrderService extends BaseService {
     }
 
     totalDiscountAmount = Math.min(totalDiscountAmount, orderTotal);
+
+    logger.info(`[DEBUG] Final Total Discount: ${totalDiscountAmount}`);
+
     return { appliedDocs, totalDiscountAmount, giftRequests };
   }
 
@@ -575,6 +609,8 @@ class OrderService extends BaseService {
         calculatedSurchargeAmount += s.cost;
         return { id: s._id, name: s.name, cost: s.cost };
       });
+
+      logger.info(`[DEBUG] Surcharges Applied: ${JSON.stringify(appliedSurcharges)} | Total=${calculatedSurchargeAmount}`);
     }
 
     // 2. Calculate Discount & Get Gift Requests

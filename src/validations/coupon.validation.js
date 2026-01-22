@@ -35,7 +35,7 @@ const create = {
 
       maxUses: Joi.number().min(0).default(0),
       usedCount: Joi.number().min(0).default(0),
-      maxUsesPerUser: Joi.number().min(0).default(1),
+      maxUsesPerUser: Joi.number().min(0).default(0),
 
       public: Joi.boolean().default(true),
       claimable: Joi.boolean().default(false),
