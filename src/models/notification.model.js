@@ -10,7 +10,7 @@ const NotificationSchema = new Schema(
     content: { type: String, required: true }, // Nội dung: Tên, SĐT, Thời gian...
     type: {
       type: String,
-      enum: ['ORDER_NEW', 'SYSTEM_ALERT'],
+      enum: ['ORDER_NEW', 'SYSTEM_ALERT', 'ORDER_CANCELED_AUTO', 'ORDER_PAYMENT_REMINDER'],
       default: 'ORDER_NEW',
     },
 

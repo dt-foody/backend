@@ -5,6 +5,7 @@ const app = require('./app');
 const config = require('./config/config');
 const logger = require('./config/logger');
 const { sendReferralRemindersToEligibleUsers } = require('./services/email.service');
+const { orderService } = require('./services');
 
 const { initSocket } = require('./config/socket');
 
@@ -35,6 +36,21 @@ mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {
         logger.info('[Cron] Referral reminder job completed', result);
       } catch (error) {
         logger.error('[Cron] Referral reminder job failed:', error);
+      }
+    },
+    {
+      timezone: 'Asia/Ho_Chi_Minh',
+    }
+  );
+
+  // Mỗi 1 phút (* * * * *), hệ thống sẽ chạy hàm quét.
+  cron.schedule(
+    '* * * * *',
+    async () => {
+      try {
+        await orderService.scanAndHandlePendingOrders();
+      } catch (error) {
+        logger.error('[Cron] Order Scan Error:', error);
       }
     },
     {

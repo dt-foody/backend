@@ -18,6 +18,7 @@ const surchargeRoute = require('./surcharge.route');
 const dealSettingRoute = require('./dealSetting.route');
 const layoutSettingRoute = require('./layoutSetting.route');
 const userRoute = require('./user.route');
+const notificationRoute = require('../notification.route');
 
 const router = express.Router();
 
@@ -89,6 +90,10 @@ const defaultRoutes = [
   {
     path: '/layout-settings',
     route: layoutSettingRoute,
+  },
+  {
+    path: '/notifications',
+    route: notificationRoute,
   },
 ];
 

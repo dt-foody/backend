@@ -1,7 +1,18 @@
 /* eslint-disable no-await-in-loop */
 const mongoose = require('mongoose');
 const BaseService = require('../utils/_base.service');
-const { Order, Product, Combo, Coupon, PricePromotion, Voucher, Customer, Employee, Surcharge } = require('../models');
+const {
+  Order,
+  Product,
+  Combo,
+  Coupon,
+  PricePromotion,
+  Voucher,
+  Customer,
+  Employee,
+  Surcharge,
+  Notification,
+} = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
 const logger = require('../config/logger');
@@ -22,6 +33,7 @@ class OrderService extends BaseService {
     this.adminPanelUpdateOrder = this.adminPanelUpdateOrder.bind(this);
     this.calculateShippingFee = this.calculateShippingFee.bind(this);
     this.getUserPromotionUsageMap = this.getUserPromotionUsageMap.bind(this);
+    this.scanAndHandlePendingOrders = this.scanAndHandlePendingOrders.bind(this);
   }
 
   /**
@@ -993,6 +1005,105 @@ class OrderService extends BaseService {
 
   static findById(id) {
     return this.model.findById(id);
+  }
+
+  async scanAndHandlePendingOrders() {
+    const now = new Date();
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000); // Mốc 10 phút
+    const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000); // Mốc 20 phút
+
+    logger.info(`[Cron] Running order scan at ${now.toISOString()}...`);
+
+    // ---------------------------------------------------------
+    // 1. XỬ LÝ TỰ ĐỘNG HUỶ ĐƠN ( > 20 phút chưa thanh toán )
+    // ---------------------------------------------------------
+    const expiredOrders = await this.model.find({
+      status: 'pending', // Đơn đang chờ
+      'payment.status': 'pending', // Chưa thanh toán
+      createdAt: { $lte: twentyMinutesAgo }, // Tạo trước 20 phút
+    });
+
+    for (const order of expiredOrders) {
+      // a. Cập nhật trạng thái đơn
+      order.status = 'canceled';
+      order.payment.status = 'failed';
+      order.note = `${order.note || ''}\n[System] Huỷ tự động do quá hạn thanh toán (20p).`;
+      await order.save();
+
+      // b. Tìm User ID để gửi thông báo
+      const userId = await this._getUserIdFromProfile(order);
+
+      if (userId) {
+        // c. Tạo thông báo + Bắn Socket
+        await notificationService.createNotification({
+          title: 'Đơn hàng đã bị huỷ',
+          content:
+            'Trong trường hợp chưa nhận được xác nhận đặt đơn từ bạn, bếp Lưu Chi xin phép huỷ đơn để đảm bảo tiến độ phục vụ. Rất mong được đón tiếp bạn trong lần đặt đơn tiếp theo ạ',
+          type: 'ORDER_CANCELED_AUTO', // Type riêng để dễ tracking
+          referenceId: order._id,
+          referenceModel: 'Order',
+          receivers: [userId],
+        });
+      }
+
+      // d. Bắn Socket cập nhật trạng thái đơn hàng (Realtime UI update)
+      emitOrderUpdate(order);
+      logger.info(`[Cron] Auto-canceled Order #${order.orderCode}`);
+    }
+
+    // ---------------------------------------------------------
+    // 2. XỬ LÝ NHẮC NHỞ THANH TOÁN ( > 10 phút và < 20 phút )
+    // ---------------------------------------------------------
+    const reminderOrders = await this.model.find({
+      status: 'pending',
+      'payment.status': 'pending',
+      createdAt: {
+        $lte: tenMinutesAgo,
+        $gt: twentyMinutesAgo,
+      },
+    });
+
+    for (const order of reminderOrders) {
+      // Kiểm tra xem đã gửi thông báo nhắc nhở cho đơn này chưa (tránh spam)
+      const existingNotif = await Notification.findOne({
+        referenceId: order._id,
+        type: 'ORDER_PAYMENT_REMINDER',
+      });
+
+      if (!existingNotif) {
+        const userId = await this._getUserIdFromProfile(order);
+
+        if (userId) {
+          await notificationService.createNotification({
+            title: 'Nhắc nhở thanh toán',
+            content: 'Dạ, quý khách vui lòng hoàn tất thanh toán để bếp có thể chuẩn bị đơn kịp thời ạ.',
+            type: 'ORDER_PAYMENT_REMINDER',
+            referenceId: order._id,
+            referenceModel: 'Order',
+            receivers: [userId],
+          });
+          logger.info(`[Cron] Reminded payment for Order #${order.orderCode}`);
+        }
+      }
+    }
+  }
+
+  // Helper nội bộ để lấy User ID từ Profile
+  async _getUserIdFromProfile(order) {
+    if (!order.profile) return null;
+    let userId = null;
+    try {
+      if (order.profileType === 'Customer') {
+        const cus = await Customer.findById(order.profile);
+        if (cus) userId = cus.user;
+      } else if (order.profileType === 'Employee') {
+        const emp = await Employee.findById(order.profile);
+        if (emp) userId = emp.user;
+      }
+    } catch (e) {
+      logger.error(`Error fetching user from profile ${order.profile}: ${e.message}`);
+    }
+    return userId;
   }
 }
 
