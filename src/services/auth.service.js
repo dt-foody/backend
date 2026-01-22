@@ -7,6 +7,7 @@ const employeeService = require('./employee.service');
 const { Token } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { tokenTypes } = require('../config/tokens');
+const logger = require('../config/logger');
 
 /**
  * Tạo mã giới thiệu duy nhất dựa trên email và random bytes
@@ -148,6 +149,7 @@ const refreshAuth = async (refreshToken) => {
     await refreshTokenDoc.remove();
     return tokenService.generateAuthTokens(user);
   } catch (error) {
+    logger.error('refreshAuth error:', error);
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate');
   }
 };
@@ -162,13 +164,17 @@ const resetPassword = async (resetPasswordToken, newPassword) => {
   try {
     const resetPasswordTokenDoc = await tokenService.verifyToken(resetPasswordToken, tokenTypes.RESET_PASSWORD);
     const user = await userService.findById(resetPasswordTokenDoc.user);
+
     if (!user) {
       throw new Error();
     }
 
-    await userService.updateById(user.id || user._id, { password: newPassword });
-    await Token.deleteMany({ user: user.id || user._id, type: tokenTypes.RESET_PASSWORD });
+    const userId = user._id || user.id;
+
+    await userService.updateById(userId, { password: newPassword });
+    await Token.deleteMany({ user: userId, type: tokenTypes.RESET_PASSWORD });
   } catch (error) {
+    logger.error('resetPassword error:', error);
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Password reset failed');
   }
 };
@@ -190,6 +196,7 @@ const verifyEmail = async (verifyEmailToken) => {
     // await Token.deleteMany({ user: user.id, type: tokenTypes.VERIFY_EMAIL });
     await userService.updateOne({ _id: user._id || user.id }, { isEmailVerified: true });
   } catch (error) {
+    logger.error('verifyEmail error:', error);
     throw new ApiError(httpStatus.UNAUTHORIZED, 'Email verification failed');
   }
 };
