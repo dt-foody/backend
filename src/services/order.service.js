@@ -1,5 +1,6 @@
 /* eslint-disable no-await-in-loop */
 const mongoose = require('mongoose');
+const moment = require('moment');
 const BaseService = require('../utils/_base.service');
 const {
   Order,
@@ -34,6 +35,7 @@ class OrderService extends BaseService {
     this.calculateShippingFee = this.calculateShippingFee.bind(this);
     this.getUserPromotionUsageMap = this.getUserPromotionUsageMap.bind(this);
     this.scanAndHandlePendingOrders = this.scanAndHandlePendingOrders.bind(this);
+    this.scanAndNotifyUpcomingOrders = this.scanAndNotifyUpcomingOrders.bind(this);
   }
 
   /**
@@ -1104,6 +1106,84 @@ class OrderService extends BaseService {
       logger.error(`Error fetching user from profile ${order.profile}: ${e.message}`);
     }
     return userId;
+  }
+
+  /* ============================================================
+   * [UPDATED] CRONJOB: QUÉT ĐƠN ĐẶT LỊCH (HỖ TRỢ ĐƠN GẤP)
+   * ============================================================ */
+  async scanAndNotifyUpcomingOrders() {
+    const now = new Date();
+
+    // 1. Định nghĩa các mốc thời gian giới hạn (Thresholds)
+    // Thay vì check đúng phút, ta check khoảng: "Giao từ bây giờ đến X phút nữa"
+
+    // Mốc 45 phút cho việc chuẩn bị
+    const prepDeadline = moment(now).add(45, 'minutes').toDate();
+
+    // Mốc 20 phút cho việc gọi ship
+    const shipDeadline = moment(now).add(20, 'minutes').toDate();
+
+    // 2. [TASK 1] NHẮC NHỞ CHUẨN BỊ (Trong vòng 45p tới)
+    // Tìm đơn: Scheduled + (Confirmed/Preparing) + Chưa quá hạn giao + Nằm trong 45p tới
+    const prepOrders = await this.model.find({
+      status: { $in: ['confirmed', 'preparing'] },
+      'deliveryTime.option': 'scheduled',
+      priorityTime: {
+        $gt: now, // Đơn chưa quá giờ giao (vẫn còn trong tương lai)
+        $lte: prepDeadline, // Giao trong vòng 45 phút nữa
+      },
+    });
+
+    for (const order of prepOrders) {
+      // Quan trọng: Kiểm tra xem đã gửi thông báo này chưa để tránh spam mỗi phút
+      const exists = await Notification.findOne({
+        referenceId: order._id,
+        type: 'ADMIN_REMINDER_PREP',
+      });
+
+      if (!exists) {
+        const timeStr = moment(order.priorityTime).utcOffset(7).format('HH:mm DD/MM');
+        await notificationService.createNotification({
+          title: `⚠️ Nhắc nhở: Chuẩn bị đơn #${order.orderCode}`,
+          content: `Đơn đặt lịch #${order.orderCode} giao lúc ${timeStr} (còn < 45p). Bếp vui lòng kiểm tra và chuẩn bị món.`,
+          type: 'ADMIN_REMINDER_PREP',
+          referenceId: order._id,
+          referenceModel: 'Order',
+          isGlobal: true,
+        });
+        logger.info(`[Cron] Sent Prep Reminder for Order #${order.orderCode}`);
+      }
+    }
+
+    // 3. [TASK 2] NHẮC NHỞ GỌI SHIP (Trong vòng 20p tới)
+    const shipOrders = await this.model.find({
+      status: { $in: ['confirmed', 'preparing', 'ready'] },
+      'deliveryTime.option': 'scheduled',
+      priorityTime: {
+        $gt: now,
+        $lte: shipDeadline, // Giao trong vòng 20 phút nữa
+      },
+    });
+
+    for (const order of shipOrders) {
+      const exists = await Notification.findOne({
+        referenceId: order._id,
+        type: 'ADMIN_REMINDER_SHIP',
+      });
+
+      if (!exists) {
+        const timeStr = moment(order.priorityTime).utcOffset(7).format('HH:mm DD/MM');
+        await notificationService.createNotification({
+          title: `🚀 Nhắc nhở: Gọi ship đơn #${order.orderCode}`,
+          content: `Đơn đặt lịch #${order.orderCode} giao lúc ${timeStr} (còn < 20p). Vui lòng đặt tài xế ngay.`,
+          type: 'ADMIN_REMINDER_SHIP',
+          referenceId: order._id,
+          referenceModel: 'Order',
+          isGlobal: true,
+        });
+        logger.info(`[Cron] Sent Ship Reminder for Order #${order.orderCode}`);
+      }
+    }
   }
 }
 

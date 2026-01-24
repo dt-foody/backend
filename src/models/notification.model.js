@@ -10,7 +10,14 @@ const NotificationSchema = new Schema(
     content: { type: String, required: true }, // Nội dung: Tên, SĐT, Thời gian...
     type: {
       type: String,
-      enum: ['ORDER_NEW', 'SYSTEM_ALERT', 'ORDER_CANCELED_AUTO', 'ORDER_PAYMENT_REMINDER'],
+      enum: [
+        'ORDER_NEW',
+        'SYSTEM_ALERT',
+        'ORDER_CANCELED_AUTO',
+        'ORDER_PAYMENT_REMINDER',
+        'ADMIN_REMINDER_PREP',
+        'ADMIN_REMINDER_SHIP',
+      ],
       default: 'ORDER_NEW',
     },
 
@@ -34,6 +41,10 @@ const NotificationSchema = new Schema(
   },
   { timestamps: true }
 );
+
+NotificationSchema.index({ referenceId: 1, type: 1 }, { unique: true });
+NotificationSchema.index({ receivers: 1, createdAt: -1 });
+NotificationSchema.index({ isGlobal: 1, createdAt: -1 });
 
 NotificationSchema.plugin(toJSON);
 NotificationSchema.plugin(paginate);

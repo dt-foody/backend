@@ -57,6 +57,25 @@ mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {
       timezone: 'Asia/Ho_Chi_Minh',
     }
   );
+
+  // Mỗi 1 phút (* * * * *), hệ thống sẽ chạy hàm quét.
+  cron.schedule(
+    '* * * * *',
+    async () => {
+      try {
+        // 1. Quét đơn quá hạn thanh toán / nhắc thanh toán (Logic cũ)
+        await orderService.scanAndHandlePendingOrders();
+
+        // 2. [THÊM] Quét đơn sắp đến giờ giao (Logic mới)
+        await orderService.scanAndNotifyUpcomingOrders();
+      } catch (error) {
+        logger.error('[Cron] Order Scan Error:', error);
+      }
+    },
+    {
+      timezone: 'Asia/Ho_Chi_Minh',
+    }
+  );
 });
 
 const exitHandler = () => {
