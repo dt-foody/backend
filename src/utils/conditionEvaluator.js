@@ -71,6 +71,18 @@ const RESOLVER_DEFS = {
     },
     isUserDependent: false,
   },
+
+  current_full_date: {
+    fn: () => {
+      const now = new Date();
+      const date = String(now.getDate()).padStart(2, '0');
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const year = now.getFullYear();
+      return `${year}-${month}-${date}`; // Trả về định dạng "yyyy-mm-dd"
+    },
+    isUserDependent: false,
+  },
+
   // --- REFERRAL/REWARD ---
   referrer_successful_invites: {
     fn: (context) => context?.profile?.referrerSuccessfulInvites || 0,
