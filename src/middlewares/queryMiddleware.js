@@ -11,8 +11,6 @@ const queryMiddleware = (req, res, next) => {
     scope = 'admin';
   }
 
-  console.log('Determined scope:', hostname, scope);
-
   // Chuyển đổi kiểu dữ liệu
   page = parseInt(page, 10);
   limit = parseInt(limit, 10);

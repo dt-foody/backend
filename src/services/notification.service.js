@@ -26,14 +26,22 @@ const createNotification = async (data) => {
  * @param {Object} options - { page, limit, sortBy }
  */
 const queryNotifications = async (user, options) => {
-  const userId = user._id;
+  const userId = user._id || user.id;
 
   // 1. Điều kiện lọc:
   // - Hoặc là thông báo Global (isGlobal = true)
   // - Hoặc là thông báo gửi đích danh cho User (receivers chứa userId)
-  const filter = {
-    $or: [{ isGlobal: true }, { receivers: userId }],
-  };
+
+  let filter = null;
+  if (options.scope === 'admin') {
+    // Scope admin lấy cả thông báo global và gửi đích danh
+    filter = {
+      $or: [{ isGlobal: true }, { receivers: userId }],
+    };
+  } else {
+    // Scope user bình thường chỉ lấy thông báo gửi đích danh
+    filter = { receivers: userId };
+  }
 
   // 2. Query DB với phân trang
   // Sử dụng plugin paginate của bạn
