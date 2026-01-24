@@ -1,5 +1,4 @@
 const httpStatus = require('http-status');
-const pick = require('../utils/pick');
 const catchAsync = require('../utils/catchAsync');
 const { notificationService } = require('../services');
 
@@ -7,16 +6,13 @@ const { notificationService } = require('../services');
  * Lấy lịch sử thông báo của User đang đăng nhập
  */
 const getNotifications = catchAsync(async (req, res) => {
-  // Lấy các tham số phân trang (page, limit)
-  const options = pick(req.query, ['sortBy', 'limit', 'page']);
-
   // Mặc định sort mới nhất trước
-  if (!options.sortBy) {
-    options.sortBy = 'createdAt:desc';
+  if (!req.options.sortBy) {
+    req.options.sortBy = 'createdAt:desc';
   }
 
   // Gọi service lấy danh sách (truyền user đang login để lọc)
-  const result = await notificationService.queryNotifications(req.user, options);
+  const result = await notificationService.queryNotifications(req.user, req.options);
 
   res.send(result);
 });
