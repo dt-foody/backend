@@ -1014,7 +1014,7 @@ class OrderService extends BaseService {
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000); // Mốc 10 phút
     const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000); // Mốc 20 phút
 
-    logger.info(`[Cron] Running order scan at ${now.toISOString()}...`);
+    logger.info(`[Cron] Running order scanAndHandlePendingOrders at ${now.toISOString()}...`);
 
     // ---------------------------------------------------------
     // 1. XỬ LÝ TỰ ĐỘNG HUỶ ĐƠN ( > 20 phút chưa thanh toán )
@@ -1029,7 +1029,7 @@ class OrderService extends BaseService {
       // a. Cập nhật trạng thái đơn
       order.status = 'canceled';
       order.payment.status = 'failed';
-      order.note = `${order.note || ''}\n[System] Huỷ tự động do quá hạn thanh toán (20p).`;
+      order.note = `${order.note || ''}\n[Hệ Thống] Huỷ tự động do quá hạn thanh toán (20p).`;
       await order.save();
 
       // b. Tìm User ID để gửi thông báo
@@ -1113,6 +1113,8 @@ class OrderService extends BaseService {
    * ============================================================ */
   async scanAndNotifyUpcomingOrders() {
     const now = new Date();
+
+    logger.info(`[Cron] Running order scanAndNotifyUpcomingOrders at ${now.toISOString()}...`);
 
     // 1. Định nghĩa các mốc thời gian giới hạn (Thresholds)
     // Thay vì check đúng phút, ta check khoảng: "Giao từ bây giờ đến X phút nữa"

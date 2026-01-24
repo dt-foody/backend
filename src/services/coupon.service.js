@@ -38,6 +38,9 @@ class CouponService extends BaseService {
         endDate: { $gte: now },
         $or: [{ maxUses: 0 }, { $expr: { $lt: ['$usedCount', '$maxUses'] } }],
       })
+      .populate({
+        path: 'giftItems.item',
+      })
       .lean();
 
     // [FIX LOGIC] 1a. Kiểm tra lịch sử sử dụng của User với danh sách Public Coupons này
@@ -140,7 +143,13 @@ class CouponService extends BaseService {
       status: 'UNUSED',
       expiredAt: { $gte: now },
     })
-      .populate('coupon')
+      .populate({
+        path: 'coupon',
+        populate: {
+          path: 'giftItems.item',
+          select: 'name image',
+        },
+      })
       .lean();
 
     const formattedPersonal = vouchers
