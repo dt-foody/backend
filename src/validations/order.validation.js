@@ -63,7 +63,7 @@ const createOrderItemSchema = Joi.object({
  * ============================================================ */
 const paymentSchema = Joi.object({
   method: Joi.string().valid('cash', 'payos', 'momo', 'vnpay', 'bank_transfer').default('cash'),
-  status: Joi.string().valid('pending', 'paid', 'failed', 'refunded').default('pending'),
+  status: Joi.string().valid('pending', 'paid', 'failed', 'refunded', 'canceled').default('pending'),
   transactionId: Joi.string().allow('', null).default(''),
   checkoutUrl: Joi.string().allow('', null).default(''),
   qrCode: Joi.string().allow('', null).default(''), // Bổ sung cho PayOS nếu cần
