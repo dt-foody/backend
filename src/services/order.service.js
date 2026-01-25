@@ -1001,6 +1001,17 @@ class OrderService extends BaseService {
               receivers: [userId],
             });
           }
+
+          if (order.status === 'completed') {
+            await notificationService.createNotification({
+              title: `Đơn hàng #${order.orderId} đã hoàn tất`,
+              content: `Lưu Chi vừa gửi cà phê đến bạn. Chúc bạn thưởng thức thật trọn vẹn 🤎`,
+              type: 'ORDER_STATUS_UPDATE',
+              referenceId: order._id,
+              referenceModel: 'Order',
+              receivers: [userId],
+            });
+          }
         }
       } catch (err) {
         logger.error(`Failed to send status notification for order ${order.orderId}:`, err);

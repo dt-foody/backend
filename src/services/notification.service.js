@@ -105,11 +105,18 @@ const markAllAsRead = async (userId) => {
 /**
  * Đếm số lượng chưa đọc
  */
-const countUnread = async (userId) => {
+const countUnread = async (userId, options) => {
   const filter = {
-    $or: [{ isGlobal: true }, { receivers: userId }],
     'readBy.user': { $ne: userId },
   };
+  if (options.scope === 'admin') {
+    // Scope admin lấy cả thông báo global và gửi đích danh
+    filter.$or = [{ isGlobal: true }, { receivers: userId }];
+  } else {
+    // Scope user bình thường chỉ lấy thông báo gửi đích danh
+    filter.receivers = userId;
+  }
+
   return Notification.countDocuments(filter);
 };
 

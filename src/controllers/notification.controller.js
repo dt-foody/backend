@@ -38,7 +38,7 @@ const markAllAsRead = catchAsync(async (req, res) => {
  * Lấy số lượng thông báo chưa đọc (Dùng để hiện badge đỏ trên chuông)
  */
 const getUnreadCount = catchAsync(async (req, res) => {
-  const count = await notificationService.countUnread(req.user._id);
+  const count = await notificationService.countUnread(req.user._id, req.options);
   res.send({ unreadCount: count });
 });
 

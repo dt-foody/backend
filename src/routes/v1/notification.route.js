@@ -11,11 +11,9 @@ const router = express.Router();
 // Tất cả các route này đều cần đăng nhập
 router.use(auth());
 
-// router.route('/').get(notificationController.getNotifications); // GET /v1/notifications
+router.get('/', queryMiddleware, notificationController.getNotifications); // GET /v1/notifications
 
-router.get('/', queryMiddleware, notificationController.getNotifications);
-
-router.route('/unread-count').get(notificationController.getUnreadCount); // GET /v1/notifications/unread-count
+router.get('/unread-count', queryMiddleware, notificationController.getUnreadCount); // GET /v1/notifications/unread-count
 
 router.route('/read-all').patch(notificationController.markAllAsRead); // PATCH /v1/notifications/read-all
 
