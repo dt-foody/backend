@@ -973,6 +973,41 @@ class OrderService extends BaseService {
       await OrderService.updateProfileStats(order);
     }
 
+    // --- [NEW] GỬI THÔNG BÁO CHO KHÁCH HÀNG KHI TRẠNG THÁI THAY ĐỔI ---
+    if (payload.status && payload.status !== existing.status) {
+      try {
+        const userId = await this._getUserIdFromProfile(order);
+        if (userId) {
+          // 1. Khi chuyển sang PREPARING (Đã xác nhận & Đang chuẩn bị)
+          if (order.status === 'preparing') {
+            await notificationService.createNotification({
+              title: `Đơn hàng #${order.orderId} đang chuẩn bị`,
+              content: `Đơn hàng #${order.orderId} của bạn đã được xác nhận và Bếp đang chuẩn bị đơn.`,
+              type: 'ORDER_STATUS_UPDATE',
+              referenceId: order._id,
+              referenceModel: 'Order',
+              receivers: [userId],
+            });
+          }
+
+          // 2. Khi chuyển sang DELIVERING (Đang giao hàng)
+          if (order.status === 'delivering') {
+            await notificationService.createNotification({
+              title: `Đơn hàng #${order.orderId} đang giao`,
+              content: `Đơn hàng đang trên đường giao tới, bạn để ý điện thoại giúp chúng mình nhé.`,
+              type: 'ORDER_STATUS_UPDATE',
+              referenceId: order._id,
+              referenceModel: 'Order',
+              receivers: [userId],
+            });
+          }
+        }
+      } catch (err) {
+        logger.error(`Failed to send status notification for order ${order.orderId}:`, err);
+      }
+    }
+    // ------------------------------------------------------------------
+
     // Ghi Log Audit And Socket Emit
     try {
       emitOrderUpdate(order);
