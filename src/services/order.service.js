@@ -981,7 +981,7 @@ class OrderService extends BaseService {
           // 1. Khi chuyển sang PREPARING (Đã xác nhận & Đang chuẩn bị)
           if (order.status === 'preparing') {
             await notificationService.createNotification({
-              title: `Đơn hàng #${order.orderId} đang chuẩn bị`,
+              title: `Trạng thái đơn hàng #${order.orderId}: Đang chuẩn bị đơn`,
               content: `Đơn hàng #${order.orderId} của bạn đã được xác nhận và Bếp đang chuẩn bị đơn.`,
               type: 'ORDER_STATUS_UPDATE',
               referenceId: order._id,
@@ -993,7 +993,7 @@ class OrderService extends BaseService {
           // 2. Khi chuyển sang DELIVERING (Đang giao hàng)
           if (order.status === 'delivering') {
             await notificationService.createNotification({
-              title: `Đơn hàng #${order.orderId} đang giao`,
+              title: `Trạng thái đơn hàng #${order.orderId}: Đang giao`,
               content: `Đơn hàng đang trên đường giao tới, bạn để ý điện thoại giúp chúng mình nhé.`,
               type: 'ORDER_STATUS_UPDATE',
               referenceId: order._id,
@@ -1004,8 +1004,19 @@ class OrderService extends BaseService {
 
           if (order.status === 'completed') {
             await notificationService.createNotification({
-              title: `Đơn hàng #${order.orderId} đã hoàn tất`,
+              title: `Trạng thái đơn hàng #${order.orderId}: Đã hoàn thành`,
               content: `Lưu Chi vừa gửi cà phê đến bạn. Chúc bạn thưởng thức thật trọn vẹn 🤎`,
+              type: 'ORDER_STATUS_UPDATE',
+              referenceId: order._id,
+              referenceModel: 'Order',
+              receivers: [userId],
+            });
+          }
+
+          if (order.status === 'canceled') {
+            await notificationService.createNotification({
+              title: `Trạng thái đơn hàng #${order.orderId}: Đã bị huỷ`,
+              content: `Vì lý do từ phía bếp, và như đã trao đổi trực tiếp với bạn, Lưu Chi xin phép huỷ đơn này. Hẹn được phục vụ bạn vào lần đặt tiếp theo 🤎`,
               type: 'ORDER_STATUS_UPDATE',
               referenceId: order._id,
               referenceModel: 'Order',
@@ -1091,7 +1102,7 @@ class OrderService extends BaseService {
       if (userId) {
         // c. Tạo thông báo + Bắn Socket
         await notificationService.createNotification({
-          title: 'Đơn hàng đã bị huỷ',
+          title: `Trạng thái đơn hàng #${order.orderId}: Đã bị huỷ`,
           content:
             'Trong trường hợp chưa nhận được xác nhận đặt đơn từ bạn, bếp Lưu Chi xin phép huỷ đơn để đảm bảo tiến độ phục vụ. Rất mong được đón tiếp bạn trong lần đặt đơn tiếp theo ạ',
           type: 'ORDER_CANCELED_AUTO', // Type riêng để dễ tracking
