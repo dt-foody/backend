@@ -138,7 +138,7 @@ const verifyEmail = catchAsync(async (req, res) => {
   // --- MỚI: TẠO THÔNG BÁO CHÀO MỪNG (POPUP REFERRAL) ---
   try {
     await notificationService.createNotification({
-      recipient: user.id || user._id,
+      receivers: [user.id || user._id],
       referenceId: user.id || user._id,
       referenceModel: 'User',
       type: 'REFERRAL_INFO', // Đặt loại riêng để Frontend dễ xử lý popup
