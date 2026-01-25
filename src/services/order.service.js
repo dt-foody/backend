@@ -1,6 +1,10 @@
 /* eslint-disable no-await-in-loop */
 const mongoose = require('mongoose');
-const moment = require('moment');
+
+const moment = require('moment-timezone');
+
+moment.tz.setDefault('Asia/Ho_Chi_Minh');
+
 const BaseService = require('../utils/_base.service');
 const {
   Order,
@@ -1022,6 +1026,9 @@ class OrderService extends BaseService {
     const expiredOrders = await this.model.find({
       status: 'pending', // Đơn đang chờ
       'payment.status': 'pending', // Chưa thanh toán
+      'payment.method': {
+        $ne: 'cash',
+      },
       createdAt: { $lte: twentyMinutesAgo }, // Tạo trước 20 phút
     });
 
@@ -1059,6 +1066,9 @@ class OrderService extends BaseService {
     const reminderOrders = await this.model.find({
       status: 'pending',
       'payment.status': 'pending',
+      'payment.method': {
+        $ne: 'cash',
+      },
       createdAt: {
         $lte: tenMinutesAgo,
         $gt: twentyMinutesAgo,
@@ -1131,10 +1141,12 @@ class OrderService extends BaseService {
       status: { $in: ['confirmed', 'preparing'] },
       'deliveryTime.option': 'scheduled',
       priorityTime: {
-        $gt: now, // Đơn chưa quá giờ giao (vẫn còn trong tương lai)
+        // $gt: now, // Đơn chưa quá giờ giao (vẫn còn trong tương lai)
         $lte: prepDeadline, // Giao trong vòng 45 phút nữa
       },
     });
+
+    logger.info(`prepOrders -- ${JSON.stringify(prepOrders)}`);
 
     for (const order of prepOrders) {
       // Quan trọng: Kiểm tra xem đã gửi thông báo này chưa để tránh spam mỗi phút
@@ -1146,14 +1158,14 @@ class OrderService extends BaseService {
       if (!exists) {
         const timeStr = moment(order.priorityTime).utcOffset(7).format('HH:mm DD/MM');
         await notificationService.createNotification({
-          title: `⚠️ Nhắc nhở: Chuẩn bị đơn #${order.orderCode}`,
-          content: `Đơn đặt lịch #${order.orderCode} giao lúc ${timeStr} (còn < 45p). Bếp vui lòng kiểm tra và chuẩn bị món.`,
+          title: `⚠️ Nhắc nhở: Chuẩn bị đơn #${order.orderId}`,
+          content: `Đơn đặt lịch #${order.orderId} giao lúc ${timeStr} (còn < 45p). Bếp vui lòng kiểm tra và chuẩn bị món.`,
           type: 'ADMIN_REMINDER_PREP',
           referenceId: order._id,
           referenceModel: 'Order',
           isGlobal: true,
         });
-        logger.info(`[Cron] Sent Prep Reminder for Order #${order.orderCode}`);
+        logger.info(`[Cron] Sent Prep Reminder for Order #${order.orderId}`);
       }
     }
 
@@ -1167,6 +1179,8 @@ class OrderService extends BaseService {
       },
     });
 
+    logger.info(`shipOrders -- ${JSON.stringify(shipOrders)}`);
+
     for (const order of shipOrders) {
       const exists = await Notification.findOne({
         referenceId: order._id,
@@ -1176,14 +1190,14 @@ class OrderService extends BaseService {
       if (!exists) {
         const timeStr = moment(order.priorityTime).utcOffset(7).format('HH:mm DD/MM');
         await notificationService.createNotification({
-          title: `🚀 Nhắc nhở: Gọi ship đơn #${order.orderCode}`,
-          content: `Đơn đặt lịch #${order.orderCode} giao lúc ${timeStr} (còn < 20p). Vui lòng đặt tài xế ngay.`,
+          title: `🚀 Nhắc nhở: Gọi ship đơn #${order.orderId}`,
+          content: `Đơn đặt lịch #${order.orderId} giao lúc ${timeStr} (còn < 20p). Vui lòng đặt tài xế ngay.`,
           type: 'ADMIN_REMINDER_SHIP',
           referenceId: order._id,
           referenceModel: 'Order',
           isGlobal: true,
         });
-        logger.info(`[Cron] Sent Ship Reminder for Order #${order.orderCode}`);
+        logger.info(`[Cron] Sent Ship Reminder for Order #${order.orderId}`);
       }
     }
   }
