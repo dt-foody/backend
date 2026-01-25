@@ -139,6 +139,8 @@ const verifyEmail = catchAsync(async (req, res) => {
   try {
     await notificationService.createNotification({
       recipient: user.id || user._id,
+      referenceId: user.id || user._id,
+      referenceModel: 'User',
       type: 'REFERRAL_INFO', // Đặt loại riêng để Frontend dễ xử lý popup
       title: 'Gửi quà cho người mình thương cùng Lưu Chi',
       // Sử dụng \n để xuống dòng cho nội dung popup

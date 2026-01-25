@@ -23,9 +23,14 @@ const NotificationSchema = new Schema(
       default: 'ORDER_NEW',
     },
 
+    data: {
+      type: Object, // Lưu json tùy ý (actionLink, actionLabel...)
+      default: {},
+    },
+
     // --- LIÊN KẾT (Để click vào xem chi tiết) ---
     referenceId: { type: Schema.Types.ObjectId, required: true, refPath: 'referenceModel' },
-    referenceModel: { type: String, required: true, enum: ['Order'] },
+    referenceModel: { type: String, required: true, enum: ['Order', 'User'] },
 
     // --- LOGIC NGƯỜI NHẬN ---
     isGlobal: { type: Boolean, default: false }, // applyAll: True = Gửi tất cả Admin/NV
