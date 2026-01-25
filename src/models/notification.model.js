@@ -24,8 +24,8 @@ const NotificationSchema = new Schema(
     },
 
     data: {
-      type: Object, // Lưu json tùy ý (actionLink, actionLabel...)
-      default: {},
+      actionLink: String,
+      actionLabel: String,
     },
 
     // --- LIÊN KẾT (Để click vào xem chi tiết) ---
