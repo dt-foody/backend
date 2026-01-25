@@ -18,6 +18,7 @@ const NotificationSchema = new Schema(
         'ADMIN_REMINDER_PREP',
         'ADMIN_REMINDER_SHIP',
         'ORDER_STATUS_UPDATE',
+        'REFERRAL_INFO',
       ],
       default: 'ORDER_NEW',
     },

@@ -1,8 +1,17 @@
 const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
-const { authService, customerService, employeeService, tokenService, emailService } = require('../services');
+const {
+  authService,
+  customerService,
+  employeeService,
+  tokenService,
+  emailService,
+  notificationService,
+} = require('../services');
 const { getEffectivePermissions } = require('../utils/permission');
 const config = require('../config/config');
+
+const logger = require('../config/logger');
 
 const register = catchAsync(async (req, res) => {
   // 1. Xác định subdomain
@@ -124,7 +133,33 @@ const sendVerificationEmail = catchAsync(async (req, res) => {
 });
 
 const verifyEmail = catchAsync(async (req, res) => {
-  await authService.verifyEmail(req.query.token);
+  const user = await authService.verifyEmail(req.query.token);
+
+  // --- MỚI: TẠO THÔNG BÁO CHÀO MỪNG (POPUP REFERRAL) ---
+  try {
+    await notificationService.createNotification({
+      recipient: user.id || user._id,
+      type: 'REFERRAL_INFO', // Đặt loại riêng để Frontend dễ xử lý popup
+      title: 'Gửi quà cho người mình thương cùng Lưu Chi',
+      // Sử dụng \n để xuống dòng cho nội dung popup
+      content: `Chương trình Kết Nối.
+Chỉ với mã kết nối của bạn, bạn có thể gửi một món quà nhỏ đến người mình thương – mời họ cùng thưởng thức cà phê. 
+Mỗi người bạn gửi lời mời sẽ nhận được món quà trị giá 40.000đ ngay trong đơn hàng đầu tiên.
+Và khi 3 người bạn kết nối hoàn tất đơn từ 150.000đ, bạn sẽ nhận Voucher 35.000đ được thêm trực tiếp vào giỏ hàng.
+Lan toả hương vị bạn yêu — món quà Lưu Chi cùng bạn gửi trao.`,
+      data: {
+        // Dữ liệu bổ sung để Frontend hiển thị nút bấm
+        actionLabel: 'Xem mã kết nối của bạn & gửi lời mời',
+        actionLink: '/account-referral',
+      },
+      isRead: false,
+    });
+  } catch (error) {
+    // Log lỗi nhưng không chặn quy trình đăng ký
+    logger.error('Lỗi khi tạo thông báo chào mừng:', error);
+  }
+  // -----------------------------------------------------
+
   res.status(httpStatus.NO_CONTENT).send();
 });
 
