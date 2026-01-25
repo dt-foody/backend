@@ -17,6 +17,7 @@ const NotificationSchema = new Schema(
         'ORDER_PAYMENT_REMINDER',
         'ADMIN_REMINDER_PREP',
         'ADMIN_REMINDER_SHIP',
+        'ORDER_STATUS_UPDATE',
       ],
       default: 'ORDER_NEW',
     },
