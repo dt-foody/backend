@@ -12,6 +12,7 @@ const { getEffectivePermissions } = require('../utils/permission');
 const config = require('../config/config');
 
 const logger = require('../config/logger');
+const ApiError = require('../utils/ApiError');
 
 const register = catchAsync(async (req, res) => {
   // 1. Xác định subdomain
@@ -111,7 +112,39 @@ const logout = catchAsync(async (req, res) => {
 });
 
 const refreshTokens = catchAsync(async (req, res) => {
-  const tokens = await authService.refreshAuth(req.body.refreshToken);
+  // 1. Lấy token từ Cookie (ưu tiên) hoặc Body
+  const refreshToken = req.cookies?.refreshToken || req.body.refreshToken;
+
+  if (!refreshToken) {
+    // Nếu không tìm thấy ở đâu cả -> Lỗi
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Không tìm thấy refresh token');
+  }
+
+  // 2. Gọi service để lấy cặp token mới
+  const tokens = await authService.refreshAuth(refreshToken);
+
+  // 3. --- QUAN TRỌNG: SET LẠI COOKIE MỚI CHO CLIENT ---
+  const isProduction = config.env === 'production';
+
+  // Set Access Token Cookie
+  res.cookie('accessToken', tokens.access.token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    maxAge: 30 * 60 * 1000, // 30 phút (khớp với thời gian hết hạn của token)
+    path: '/',
+  });
+
+  // Set Refresh Token Cookie (để dùng cho lần refresh sau)
+  res.cookie('refreshToken', tokens.refresh.token, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/api/auth/refresh', // Hoặc '/' tùy vào config của bạn
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+  });
+
+  // Trả về JSON (để frontend có thể cập nhật state nếu cần, tuy nhiên cookie mới là quan trọng nhất)
   res.send({ ...tokens });
 });
 
