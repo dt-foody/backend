@@ -176,11 +176,8 @@ const verifyEmail = catchAsync(async (req, res) => {
       referenceModel: 'User',
       type: 'REFERRAL_INFO',
       title: 'Gửi quà cho người mình thương cùng Lưu Chi',
-      content: `<b>Chương trình Kết Nối.</b><br/>
-Chỉ với <strong>mã kết nối của bạn</strong>, bạn có thể gửi một món quà nhỏ đến người mình thương – mời họ cùng thưởng thức cà phê.<br/>
-Mỗi người bạn gửi lời mời sẽ nhận được <b>món quà trị giá 40.000đ</b> ngay trong đơn hàng đầu tiên.<br/>
-Và khi 3 người bạn kết nối hoàn tất đơn từ 150.000đ, bạn sẽ nhận <b>Voucher 35.000đ</b> được thêm trực tiếp vào giỏ hàng.<br/>
-Lan toả hương vị bạn yêu — món quà Lưu Chi cùng bạn gửi trao.`,
+      content:
+        "<p class='mb-3'><b>Chương trình Kết Nối.</b></p><p class='mb-3'>Chỉ với <strong>mã kết nối của bạn</strong>, bạn có thể gửi một món quà nhỏ đến người mình thương – mời họ cùng thưởng thức cà phê.</p><p class='mb-3'>Mỗi người bạn gửi lời mời sẽ nhận được <b>món quà trị giá 40.000đ</b> ngay trong đơn hàng đầu tiên.</p><p class='mb-3'>Và khi 3 người bạn kết nối hoàn tất đơn từ 150.000đ, bạn sẽ nhận <b>Voucher 35.000đ</b> được thêm trực tiếp vào giỏ hàng.</p><p class='mb-3'>Lan toả hương vị bạn yêu — món quà Lưu Chi cùng bạn gửi trao. 🤎</p>",
       data: {
         actionLabel: 'Xem mã kết nối của bạn & gửi lời mời',
         actionLink: '/account-referral',
