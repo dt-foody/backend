@@ -156,13 +156,21 @@ const calculateDaysSinceRegistration = (createdAt) => {
 };
 
 const sendReferralReminderEmail = async (user) => {
+  // --- pick email ---
+  const primaryEmail = user?.emails?.find((e) => e.isPrimary)?.value || user?.emails?.[0]?.value;
+
+  if (!primaryEmail) {
+    logger.warn(`[Referral] User ${user?._id} has no valid email, skip sending`);
+    return;
+  }
+
   const subject = 'Chia sẻ “gu” của bạn – Lưu Chi gửi quà tri ân!';
   const referralProgramUrl = `https://luuchi.com.vn/vi/`;
 
   const payload = {
     title: 'Chương trình giới thiệu bạn bè',
-    profileName: user.profile?.name || 'Bạn',
-    userEmail: user.email,
+    profileName: user?.name || 'Bạn',
+    userEmail: primaryEmail,
     referralCode: user.referralCode,
     referralProgramUrl,
     registeredDays: calculateDaysSinceRegistration(user.createdAt),
@@ -170,7 +178,7 @@ const sendReferralReminderEmail = async (user) => {
 
   const html = await getTemplate('referral-reminder.hbs', payload);
 
-  await sendEmail(user.email, subject, null, html);
+  await sendEmail(primaryEmail, subject, null, html);
 };
 
 const sendReferralRemindersToEligibleUsers = async () => {
@@ -193,7 +201,10 @@ const sendReferralRemindersToEligibleUsers = async () => {
       },
       'referralReminder.isSent': { $ne: true },
       'referralReminder.sendCount': { $lt: 3 }, // [Optional] Chỉ retry tối đa 3 lần
+      'emails.0': { $exists: true },
     });
+
+    logger.info(`eligibleUsers: ${eligibleUsers.length}`);
 
     if (eligibleUsers.length === 0) {
       return { success: true, sent: 0, failed: 0, total: 0 };
@@ -206,6 +217,8 @@ const sendReferralRemindersToEligibleUsers = async () => {
       try {
         // Tăng số lần thử lên 1 trước (hoặc sau khi gửi đều được, ở đây ta cập nhật DB sau)
         await sendReferralReminderEmail(user);
+
+        logger.info(`user: ${JSON.stringify(user.emails)}`);
 
         // --- THÀNH CÔNG ---
         await Customer.updateOne(
