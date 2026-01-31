@@ -1234,6 +1234,7 @@ class OrderService extends BaseService {
         { status: { $in: ['confirmed', 'preparing'] } },
         { status: 'pending', 'payment.method': 'cash' },
       ],
+      orderType: 'Delivery',
       'deliveryTime.option': 'scheduled',
       priorityTime: {
         // $gt: now, // Đơn chưa quá giờ giao (vẫn còn trong tương lai)
