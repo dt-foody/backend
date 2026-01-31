@@ -48,21 +48,6 @@ mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {
     '* * * * *',
     async () => {
       try {
-        await orderService.scanAndHandlePendingOrders();
-      } catch (error) {
-        logger.error('[Cron] Order Scan Error:', error);
-      }
-    },
-    {
-      timezone: 'Asia/Ho_Chi_Minh',
-    }
-  );
-
-  // Mỗi 1 phút (* * * * *), hệ thống sẽ chạy hàm quét.
-  cron.schedule(
-    '* * * * *',
-    async () => {
-      try {
         // 1. Quét đơn quá hạn thanh toán / nhắc thanh toán (Logic cũ)
         await orderService.scanAndHandlePendingOrders();
 
