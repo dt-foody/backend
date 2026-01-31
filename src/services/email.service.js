@@ -199,9 +199,12 @@ const sendReferralRemindersToEligibleUsers = async () => {
         $gte: startOfDay,
         $lte: endOfDay,
       },
-      'referralReminder.isSent': { $ne: true },
-      'referralReminder.sendCount': { $lt: 3 }, // [Optional] Chỉ retry tối đa 3 lần
       'emails.0': { $exists: true },
+      'referralReminder.isSent': { $ne: true },
+      $or: [
+        { 'referralReminder.sendCount': { $lt: 3 } },
+        { 'referralReminder.sendCount': { $exists: false } }
+      ],
     });
 
     logger.info(`eligibleUsers: ${eligibleUsers.length}`);
