@@ -1,23 +1,41 @@
 const { Notification } = require('../models');
 const { emitNotification } = require('../utils/socket.util');
+const logger = require('../config/logger');
 
 /**
  * Tạo thông báo mới (Code cũ giữ nguyên)
  */
 const createNotification = async (data) => {
-  const notification = await Notification.create({
-    title: data.title,
-    content: data.content,
-    type: data.type || 'ORDER_NEW',
-    referenceId: data.referenceId,
-    referenceModel: data.referenceModel || 'Order',
-    isGlobal: data.isGlobal || false,
-    receivers: data.receivers || [],
-    readBy: [],
-  });
+  try {
+    // Điều kiện tìm kiếm dựa trên Unique Index để tránh trùng lặp
+    const notification = await Notification.findOneAndUpdate(
+      {
+        referenceId: data.referenceId,
+        type: data.type,
+      },
+      {
+        title: data.title,
+        content: data.content,
+        referenceModel: data.referenceModel || 'Order',
+        isGlobal: data.isGlobal || false,
+        receivers: data.receivers || [],
+        // Reset lại trạng thái chưa đọc khi cập nhật nội dung mới (tùy chọn)
+        readBy: [],
+      },
+      {
+        new: true, // Trả về document sau khi update
+        upsert: true, // Nếu không tìm thấy thì tạo mới
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    );
 
-  await emitNotification(notification, data.receivers);
-  return notification;
+    await emitNotification(notification, data.receivers);
+    return notification;
+  } catch (error) {
+    logger.error(`Error in createNotification: ${error.message}`);
+    return null;
+  }
 };
 
 /**

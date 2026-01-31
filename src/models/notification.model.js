@@ -34,17 +34,24 @@ const NotificationSchema = new Schema(
 
     // --- LOGIC NGƯỜI NHẬN ---
     isGlobal: { type: Boolean, default: false }, // applyAll: True = Gửi tất cả Admin/NV
-    receivers: [{ type: Schema.Types.ObjectId, ref: 'User' }], // usersNotification: Danh sách cụ thể
+
+    receivers: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      default: [],
+    },
 
     // --- TRACKING NGƯỜI ĐỌC ---
     // Mảng lưu những ai đã đọc và thời gian đọc
-    readBy: [
-      {
-        _id: false,
-        user: { type: Schema.Types.ObjectId, ref: 'User' },
-        readAt: { type: Date, default: Date.now },
-      },
-    ],
+    readBy: {
+      type: [
+        {
+          _id: false,
+          user: { type: Schema.Types.ObjectId, ref: 'User' },
+          readAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
