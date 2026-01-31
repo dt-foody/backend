@@ -1230,7 +1230,10 @@ class OrderService extends BaseService {
     // 2. [TASK 1] NHẮC NHỞ CHUẨN BỊ (Trong vòng 45p tới)
     // Tìm đơn: Scheduled + (Confirmed/Preparing) + Chưa quá hạn giao + Nằm trong 45p tới
     const prepOrders = await this.model.find({
-      status: { $in: ['confirmed', 'preparing'] },
+      $or: [
+        { status: { $in: ['confirmed', 'preparing'] } },
+        { status: 'pending', 'payment.method': 'cash' },
+      ],
       'deliveryTime.option': 'scheduled',
       priorityTime: {
         // $gt: now, // Đơn chưa quá giờ giao (vẫn còn trong tương lai)
