@@ -28,7 +28,7 @@ mongoose.connect(config.mongoose.url, config.mongoose.options).then(() => {
   // --------------------------
 
   cron.schedule(
-    '0 10 * * *',
+    '30 19 * * *',
     async () => {
       logger.info('[Cron] Starting referral reminder job...');
       try {
