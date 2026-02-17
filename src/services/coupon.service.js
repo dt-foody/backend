@@ -25,6 +25,7 @@ class CouponService extends BaseService {
     // Context cho evaluator
     const context = {
       user,
+      profile,
       order: { totalPrice: orderValue, items: orderItems, createdAt: now },
     };
 

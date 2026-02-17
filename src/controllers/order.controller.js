@@ -17,14 +17,23 @@ class OrderController extends BaseController {
   }
 
   async customerOrder(req, res) {
+    const { user, profile, profileType } = req; // Destructure items from req.body
     const data = { ...req.body };
-    const { user, profile, profileType } = req;
+
+    // Chuẩn bị contextData để tính điều kiện (Vd: Freehsip cho đơn > 500k, Khách hàng VIP...)
+    const contextData = {
+      // 1. User Info
+      user,
+      profile,
+      // 2. Order Info
+      order: data,
+    };
 
     data.profileType = profileType || null;
     data.profile = profile ? profile._id || profile.id : null;
     data.createdBy = user ? user._id || user.id : null;
 
-    const result = await this.service.customerOrder(data, user);
+    const result = await this.service.customerOrder(data, user, contextData); // Pass contextData to service
     return res.status(OK).json(result);
   }
 

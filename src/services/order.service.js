@@ -102,10 +102,13 @@ class OrderService extends BaseService {
     const policies = await ShippingSetting.find({ isActive: true }).sort({ priority: -1 });
 
     // Prepare context for condition evaluator
-    // Note: contextData should include: { profile, user: { order: { items: [...] } } }
+    // Note: contextData should follow standard: { user, profile, order, system }
     const evalContext = {
       ...contextData,
-      distance: distanceVal, // Add distance to context for evaluation
+      order: {
+        ...(contextData.order || {}),
+        distance: distanceVal, // Add distance to order context for evaluation
+      },
     };
 
     for (const policy of policies) {
@@ -488,12 +491,21 @@ class OrderService extends BaseService {
   }
 
   /* ============================================================
-   * 2. LOGIC TÍNH DISCOUNT & COLLECT GIFTS
-   * ============================================================ */
-  static async calculateTotalDiscount({ profile, coupons = [], vouchers = [], orderTotal = 0, shippingFee = 0 }) {
+   * 2. LOGIC TÍNH  /**
+   * 4. CALCULATE DISCOUNT
+   * Logic: Tính tổng tiền giảm từ list coupons/vouchers
+   */
+  static async calculateTotalDiscount({
+    profile,
+    coupons = [],
+    vouchers = [],
+    orderTotal = 0,
+    shippingFee = 0,
+    contextData,
+  }) {
     let totalDiscountAmount = 0;
     const appliedDocs = [];
-    const giftRequests = []; // [NEW] Danh sách quà tặng cần thêm vào đơn
+    const giftRequests = []; // [NEW] Danh sách quà tặng từ Coupon
     const now = new Date();
 
     logger.info(
@@ -578,6 +590,17 @@ class OrderService extends BaseService {
           if (usedCount >= doc.maxUsesPerUser) {
             // User đã hết lượt -> Bỏ qua coupon này
             continue;
+          }
+        }
+
+        // Check Dynamic Conditions (nếu có)
+        if (doc.conditions && doc.conditions.length > 0) {
+          if (contextData) {
+            const isMatch = evaluateConditions(doc.conditions, contextData);
+            if (!isMatch) {
+              logger.warn(`Coupon conditions not met: ${doc.code}`);
+              continue;
+            }
           }
         }
 
@@ -668,7 +691,7 @@ class OrderService extends BaseService {
   /* ============================================================
    * 3. PREPARE DATA
    * ============================================================ */
-  async prepareOrderData(payload, { useMenuPrice = true, isApplySurcharge = true } = {}) {
+  async prepareOrderData(payload, { useMenuPrice = true, isApplySurcharge = true } = {}, contextData = null) {
     const { orderType, profile, items, coupons = [], vouchers = [] } = payload;
 
     // 1. Build Regular Items
@@ -702,6 +725,7 @@ class OrderService extends BaseService {
       vouchers,
       orderTotal: regularTotal,
       shippingFee,
+      contextData,
     });
 
     // 3. [NEW] Build Gift Items & Merge
@@ -824,8 +848,8 @@ class OrderService extends BaseService {
   /* ============================================================
    * 5. CONTROLLER ACTIONS
    * ============================================================ */
-  async customerOrder(payload, user = null) {
-    const orderData = await this.prepareOrderData(payload, { useMenuPrice: true, isApplySurcharge: true });
+  async customerOrder(payload, user = null, contextData = null) {
+    const orderData = await this.prepareOrderData(payload, { useMenuPrice: true, isApplySurcharge: true }, contextData);
     const order = await this.model.create(orderData);
 
     try {

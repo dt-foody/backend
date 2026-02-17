@@ -44,7 +44,13 @@ router.get(
   orderController.paginate
 );
 
-router.get('/shipping-fee', validate(orderValidation.getShippingFee), orderController.getShippingFee);
+router.get(
+  '/shipping-fee',
+  validate(orderValidation.getShippingFee),
+  authOptional(),
+  attachProfile,
+  orderController.getShippingFee
+);
 
 router.get(
   '/:code/by-code',

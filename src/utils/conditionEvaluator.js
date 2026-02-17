@@ -58,11 +58,16 @@ const RESOLVER_DEFS = {
   // --- ORDER CONTEXT ---
   order_total_items: {
     fn: (context) => {
-      const items = context?.user?.order?.items;
+      const items = context?.order?.items;
       if (!items?.length) return 0;
       return items.reduce((sum, it) => sum + (it.quantity || 0), 0);
     },
     isUserDependent: false, // Mặc định là false nếu không khai báo, nhưng ghi rõ cho dễ đọc
+  },
+
+  order_total_amount: {
+    fn: (context) => context?.order?.totalPrice || 0,
+    isUserDependent: false,
   },
 
   current_day_of_week: {
