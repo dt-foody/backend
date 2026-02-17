@@ -17,6 +17,7 @@ const {
   Employee,
   Surcharge,
   Notification,
+  ShippingSetting,
 } = require('../models');
 const { getPayOS } = require('../config/payos');
 const config = require('../config/config');
@@ -28,6 +29,7 @@ const { calculateShippingFeeByFormula } = require('../utils/shipping.util');
 
 const auditLogService = require('./auditLog.service');
 const notificationService = require('./notification.service');
+const { evaluateConditions } = require('../utils/conditionEvaluator');
 
 class OrderService extends BaseService {
   constructor() {
@@ -91,14 +93,41 @@ class OrderService extends BaseService {
   /* ============================================================
    * HELPER METHODS
    * ============================================================ */
-  async calculateShippingFee(customerLocation, orderTime) {
+  async calculateShippingFee(customerLocation, orderTime = null, contextData = {}) {
     const storeLoc = config.hereMap.storeLocation;
     const distance = await getDistanceInKm(storeLoc, customerLocation);
+    const distanceVal = parseFloat(distance.toFixed(2));
+
+    // [New] 1. Check Shipping Policies (Fixed Fee)
+    const policies = await ShippingSetting.find({ isActive: true }).sort({ priority: -1 });
+
+    // Prepare context for condition evaluator
+    // Note: contextData should include: { profile, user: { order: { items: [...] } } }
+    const evalContext = {
+      ...contextData,
+      distance: distanceVal, // Add distance to context for evaluation
+    };
+
+    for (const policy of policies) {
+      if (!policy.conditions) {
+        // If no conditions, it matches everything (Universal Fixed Fee)
+        logger.info(`[Shipping] Applied Policy: ${policy.name} (No conditions) - Fee: ${policy.fixedFee}`);
+        return { distance: distanceVal, shippingFee: policy.fixedFee, policyId: policy._id };
+      }
+
+      const isMatch = evaluateConditions(policy.conditions, evalContext);
+      if (isMatch) {
+        logger.info(`[Shipping] Applied Policy: ${policy.name} - Fee: ${policy.fixedFee}`);
+        return { distance: distanceVal, shippingFee: policy.fixedFee, policyId: policy._id };
+      }
+    }
+
+    // [Fallback] 2. Use Formula
     const shippingFee = calculateShippingFeeByFormula(distance, orderTime);
 
-    logger.info(`[DEBUG] Shipping Calc: Distance=${distance.toFixed(2)}km, Fee=${shippingFee}`);
+    logger.info(`[DEBUG] Shipping Calc (Formula): Distance=${distanceVal}km, Fee=${shippingFee}`);
 
-    return { distance: parseFloat(distance.toFixed(2)), shippingFee };
+    return { distance: distanceVal, shippingFee };
   }
 
   static normalizeOptions(optionsObj) {

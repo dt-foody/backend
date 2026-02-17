@@ -24,6 +24,7 @@ const dealSettingRoute = require('./dealSetting.route');
 const layoutSettingRoute = require('./layoutSetting.route');
 const auditLogRoute = require('./auditLog.route');
 const notificationRoute = require('./notification.route');
+const shippingSettingRoute = require('./shippingSetting.route');
 
 const router = express.Router();
 
@@ -119,6 +120,10 @@ const defaultRoutes = [
   {
     path: '/notifications',
     route: notificationRoute,
+  },
+  {
+    path: '/shipping-settings',
+    route: shippingSettingRoute,
   },
 ];
 

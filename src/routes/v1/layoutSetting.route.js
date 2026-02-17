@@ -4,7 +4,8 @@ const { layoutSettingValidation } = require('../../validations');
 
 class LayoutSettingRoute extends BaseRoute {
   constructor() {
-    super(layoutSettingController, layoutSettingValidation);
+    const middlewares = {};
+    super(layoutSettingController, layoutSettingValidation, 'layoutSettings', middlewares);
   }
 }
 

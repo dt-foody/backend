@@ -1,6 +1,6 @@
 const BaseRoute = require('../../utils/_base.route');
-const { dealSettingController } = require('../../controllers/index');
-const { dealSettingValidation } = require('../../validations/index');
+const { shippingSettingController } = require('../../controllers');
+const { shippingSettingValidation } = require('../../validations');
 
 function list(req, res, next) {
   const { search } = req.query;
@@ -35,7 +35,7 @@ function deleteManyById(req, res, next) {
   next();
 }
 
-class DealSettingRoute extends BaseRoute {
+class ShippingSettingRoute extends BaseRoute {
   constructor() {
     const middlewares = {
       list: [list],
@@ -45,8 +45,8 @@ class DealSettingRoute extends BaseRoute {
       deleteById: [deleteById],
       deleteManyById: [deleteManyById],
     };
-    super(dealSettingController, dealSettingValidation, 'dealSettings', middlewares); // Truyền controller, validation và resource
+    super(shippingSettingController, shippingSettingValidation, 'shippingSettings', middlewares);
   }
 }
 
-module.exports = new DealSettingRoute().getRouter();
+module.exports = new ShippingSettingRoute().getRouter();
