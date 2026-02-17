@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-await-in-loop */
 /**
  * Seed file: seeds/product.seed.js
  * Mục đích: Khởi tạo dữ liệu sản phẩm (product) theo danh mục cho hệ thống Foody

@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-await-in-loop */
 /**
  * Seed file: seeds/blogTag.seed.js
  * Mục đích: Khởi tạo dữ liệu cho Blog Tags từ các bài viết mẫu.

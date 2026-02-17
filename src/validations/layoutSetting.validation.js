@@ -1,6 +1,13 @@
 const Joi = require('joi');
 const { objectId } = require('./custom.validation');
 
+const dealOptionConfig = Joi.object().keys({
+  value: Joi.boolean().optional(),
+  note: Joi.string().allow('').optional(),
+  activeNote: Joi.boolean().optional(),
+  showNoteWhen: Joi.string().valid('on', 'off', 'always').optional(),
+});
+
 const create = {
   body: Joi.object().keys({
     headerNavItems: Joi.array()
@@ -13,6 +20,8 @@ const create = {
         })
       )
       .required(),
+    flashSale: dealOptionConfig.optional(),
+    combo: dealOptionConfig.optional(),
   }),
 };
 
@@ -38,6 +47,8 @@ const updateById = {
           enable: Joi.boolean().optional(),
         })
       ),
+      flashSale: dealOptionConfig.optional(),
+      combo: dealOptionConfig.optional(),
     })
     .min(1),
 };

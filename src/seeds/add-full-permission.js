@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-await-in-loop */
 /**
  * Seed file: seeds/permission.seed.js
  * Mục đích: Khởi tạo danh sách quyền (permissions) chuẩn cho hệ thống

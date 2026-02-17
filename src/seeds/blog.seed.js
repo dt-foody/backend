@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-await-in-loop */
 /**
  * Seed file: seeds/blog.seed.js
  * Mục đích: Khởi tạo dữ liệu mẫu cho blog (Foody review, ẩm thực, trải nghiệm)

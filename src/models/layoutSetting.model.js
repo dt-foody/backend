@@ -24,11 +24,34 @@ const headerNavItemSchema = mongoose.Schema(
   { _id: false }
 );
 
+// Định nghĩa Schema con cho từng tùy chọn để tái sử dụng
+const dealOptionConfigSchema = mongoose.Schema(
+  {
+    value: { type: Boolean, default: false },
+    note: { type: String, default: '' },
+    activeNote: { type: Boolean, default: false },
+    showNoteWhen: {
+      type: String,
+      enum: ['on', 'off', 'always'],
+      default: 'off',
+    },
+  },
+  { _id: false }
+);
+
 const layoutSettingSchema = mongoose.Schema(
   {
     headerNavItems: {
       type: [headerNavItemSchema],
       default: [],
+    },
+    flashSale: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
+    },
+    combo: {
+      type: dealOptionConfigSchema,
+      default: () => ({}),
     },
   },
   {

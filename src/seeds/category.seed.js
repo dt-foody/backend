@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-await-in-loop */
 /**
  * Seed file: seeds/category.seed.js
  * Mục đích: Khởi tạo danh mục (category) chuẩn theo dạng cây cho hệ thống Foody

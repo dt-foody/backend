@@ -1,3 +1,4 @@
+/* eslint-disable no-console, no-await-in-loop */
 /**
  * Seed file: seeds/blogCategory.seed.js
  * Mục đích: Khởi tạo dữ liệu cho Blog Categories từ các bài viết mẫu.

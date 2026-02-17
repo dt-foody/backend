@@ -103,7 +103,8 @@ async function generateUniqueSlug(title, model, _id = null) {
   let uniqueSlug = baseSlug;
   let counter = 1;
 
-  while (true) {
+  let isUnique = false;
+  while (!isUnique) {
     // Tìm xem slug này đã tồn tại chưa (loại trừ chính document hiện tại nếu đang update)
     const existing = await model
       .findOne({
@@ -113,6 +114,7 @@ async function generateUniqueSlug(title, model, _id = null) {
       .select('_id');
 
     if (!existing) {
+      isUnique = true;
       return uniqueSlug; // Chưa tồn tại -> Dùng được
     }
 

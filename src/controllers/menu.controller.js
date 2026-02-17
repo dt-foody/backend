@@ -1,5 +1,5 @@
 const httpStatus = require('http-status');
-const { productService, comboService, pricePromotionService, orderService, dealSettingService } = require('../services');
+const { productService, comboService, pricePromotionService, orderService, layoutSettingService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
 const config = require('../config/config');
 
@@ -49,7 +49,7 @@ class MenuController {
       return res.status(OK).json(publicMenuCache.data);
     }
 
-    const [rawPromotions, products, combos, dealSetting] = await Promise.all([
+    const [rawPromotions, products, combos, layoutSettingResult] = await Promise.all([
       pricePromotionService.findAll(
         { isActive: true, startDate: { $lte: now }, endDate: { $gte: now } },
         { sortBy: 'priority:desc' }
@@ -59,8 +59,13 @@ class MenuController {
         { isActive: true, endDate: { $gte: now } },
         { populate: 'items.selectableProducts.product', sortBy: 'priority' }
       ),
-      dealSettingService.findOne({}),
+      layoutSettingService.paginate({ limit: 1 }), // Lấy setting layout (chứa flash sale config)
     ]);
+
+    const layoutSetting =
+      layoutSettingResult && layoutSettingResult.results && layoutSettingResult.results.length > 0
+        ? layoutSettingResult.results[0]
+        : null;
 
     const promoIdsToVerify = rawPromotions.filter((p) => p.maxQuantityPerCustomer > 0).map((p) => p.id.toString());
 
@@ -161,19 +166,20 @@ class MenuController {
 
     const responseData = {
       flashSaleCategory:
-        flashSaleItems.length > 0
+        flashSaleItems.length > 0 && layoutSetting && layoutSetting.flashSale && layoutSetting.flashSale.value
           ? {
               id: 'flashsale',
               name: 'Flash Sale',
-              description: (dealSetting && dealSetting.flashSale && dealSetting.flashSale.note) || '',
-              showInMenu: dealSetting && dealSetting.flashSale && dealSetting.flashSale.value,
+              description: (layoutSetting && layoutSetting.flashSale && layoutSetting.flashSale.note) || '',
+              showInMenu: true,
               priority: -999,
               products: flashSaleItems,
             }
           : null,
       thucDon: Array.from(categoryMap.values()).sort((a, b) => a.priority - b.priority),
       combos: processedCombos,
-      descriptionCombo: (dealSetting && dealSetting.combo && dealSetting.combo.value && dealSetting.combo.note) || '',
+      descriptionCombo:
+        (layoutSetting && layoutSetting.combo && layoutSetting.combo.value && layoutSetting.combo.note) || '',
     };
 
     if (!user) publicMenuCache = { data: responseData, timestamp: now.getTime() };

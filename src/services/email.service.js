@@ -1,4 +1,4 @@
-/* eslint-disable no-await-in-loop */
+/* eslint-disable no-await-in-loop, security/detect-non-literal-fs-filename */
 const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
@@ -201,10 +201,7 @@ const sendReferralRemindersToEligibleUsers = async () => {
       },
       'emails.0': { $exists: true },
       'referralReminder.isSent': { $ne: true },
-      $or: [
-        { 'referralReminder.sendCount': { $lt: 3 } },
-        { 'referralReminder.sendCount': { $exists: false } }
-      ],
+      $or: [{ 'referralReminder.sendCount': { $lt: 3 } }, { 'referralReminder.sendCount': { $exists: false } }],
     });
 
     logger.info(`eligibleUsers: ${eligibleUsers.length}`);
