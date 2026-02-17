@@ -44,7 +44,7 @@ router.get(
   orderController.paginate
 );
 
-router.get(
+router.post(
   '/shipping-fee',
   validate(orderValidation.getShippingFee),
   authOptional(),

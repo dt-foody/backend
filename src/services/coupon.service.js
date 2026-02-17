@@ -18,7 +18,7 @@ class CouponService extends BaseService {
    * @param {Array} orderItems
    */
   async getAvailableCoupons(req, orderValue = 0, orderItems = []) {
-    const { user, profile, profileType } = req;
+    const { user, profile } = req;
 
     const now = new Date();
 
@@ -26,7 +26,7 @@ class CouponService extends BaseService {
     const context = {
       user,
       profile,
-      order: { totalPrice: orderValue, items: orderItems, createdAt: now },
+      order: { totalAmount: orderValue, items: orderItems, createdAt: now },
     };
 
     // 1. Get Public Coupons

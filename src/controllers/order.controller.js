@@ -61,16 +61,27 @@ class OrderController extends BaseController {
   }
 
   async getShippingFee(req, res) {
-    // Lấy lat, lng từ query string (trên URL)
-    // Query params thường là string, nhưng Joi validation đã giúp parse thành number
-    const { lat, lng, orderTime } = req.query;
+    const { lat, lng, orderTime, items, totalAmount } = req.body;
+
+    const { user, profile } = req;
+
+    const contextData = {
+      user,
+      profile,
+      order: {
+        totalAmount,
+        items,
+        createdAt: new Date(),
+      },
+    };
 
     const result = await this.service.calculateShippingFee(
       {
         lat: parseFloat(lat),
         lng: parseFloat(lng),
       },
-      orderTime
+      orderTime,
+      contextData
     );
 
     return res.status(OK).json(result);

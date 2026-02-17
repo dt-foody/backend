@@ -45,6 +45,17 @@ const RESOLVER_DEFS = {
     },
     isUserDependent: true,
   },
+  customer_default_address_district: {
+    fn: (context) => {
+      const addresses = context?.profile?.addresses;
+      if (!addresses?.length) return '';
+
+      const defaultAddress = addresses.find((addr) => addr?.isDefault === true);
+
+      return defaultAddress?.district || '';
+    },
+    isUserDependent: true,
+  },
   customer_order_count: {
     fn: (context) => context?.profile?.totalOrder || 0,
     isUserDependent: true,
@@ -66,7 +77,7 @@ const RESOLVER_DEFS = {
   },
 
   order_total_amount: {
-    fn: (context) => context?.order?.totalPrice || 0,
+    fn: (context) => context?.order?.totalAmount || 0,
     isUserDependent: false,
   },
 

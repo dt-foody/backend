@@ -267,10 +267,19 @@ const getByOrderId = { params: Joi.object({ orderId: Joi.number().integer().min(
 const deleteById = { params: Joi.object({ id: Joi.string().custom(objectId).required() }) };
 const deleteMany = { body: Joi.object({ ids: Joi.array().items(Joi.string().custom(objectId)).min(1).required() }) };
 const getShippingFee = {
-  query: Joi.object().keys({
+  body: Joi.object().keys({
     lat: Joi.number().required().min(-90).max(90),
     lng: Joi.number().required().min(-180).max(180),
     orderTime: Joi.date().iso().optional(),
+    items: Joi.array()
+      .items(
+        Joi.object({
+          quantity: Joi.number().integer().min(1).required(),
+          price: Joi.number().min(0),
+        }).unknown(true)
+      )
+      .optional(),
+    totalAmount: Joi.number().min(0).optional(),
   }),
 };
 
