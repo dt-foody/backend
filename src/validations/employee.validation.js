@@ -45,6 +45,8 @@ const phoneSchema = Joi.object({
 
 // --- [MỚI] Schema cho User (Tài khoản) ---
 const createUserSchema = Joi.object().keys({
+  name: Joi.string().trim(),
+  avatar: Joi.string().trim().allow('', null),
   email: Joi.string().required().email().trim().lowercase(),
   password: Joi.string().required().min(6).trim(), // Bắt buộc khi tạo mới
   role: Joi.string().default('staff'),
@@ -56,6 +58,8 @@ const createUserSchema = Joi.object().keys({
 });
 
 const updateUserSchema = Joi.object().keys({
+  name: Joi.string().trim(),
+  avatar: Joi.string().trim().allow('', null),
   email: Joi.string().email().trim().lowercase(),
   password: Joi.string().min(6).trim(), // Optional khi update (nếu không đổi pass)
   role: Joi.string(),

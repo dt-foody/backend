@@ -8,6 +8,15 @@ const { Schema } = mongoose;
 
 const userSchema = new Schema(
   {
+    name: {
+      type: String,
+      trim: true,
+    },
+    avatar: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     email: {
       type: String,
       required: true,

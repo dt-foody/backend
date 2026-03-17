@@ -9,6 +9,7 @@ const permissionRef = Joi.string().custom(objectId);
 const create = {
   body: Joi.object().keys({
     name: Joi.string().required().trim(),
+    avatar: Joi.string().trim().allow('', null),
     email: Joi.string().required().email(),
     password: Joi.string().required().custom(password),
 
@@ -51,6 +52,7 @@ const updateById = {
   body: Joi.object()
     .keys({
       name: Joi.string().trim(),
+      avatar: Joi.string().trim().allow('', null),
       email: Joi.string().email(),
       password: Joi.string().custom(password),
       role: Joi.string().valid('guest', 'staff', 'admin'),

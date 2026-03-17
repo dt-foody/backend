@@ -17,13 +17,18 @@ class EmployeeService extends BaseService {
   async create(employeeData, userData) {
     let userId = null;
     if (userData) {
+      const nextUserData = { ...userData };
+      if (!nextUserData.name && employeeData.name) {
+        nextUserData.name = employeeData.name;
+      }
+
       const isEmailTaken = await User.isEmailTaken(userData.email);
       if (isEmailTaken) {
         throw new ApiError(BAD_REQUEST, 'Email đã được sử dụng');
       }
 
       // Tạo User
-      const user = await User.create(userData); // Trả về mảng do dùng transaction
+      const user = await User.create(nextUserData); // Trả về mảng do dùng transaction
       userId = user._id;
     }
 
@@ -45,29 +50,39 @@ class EmployeeService extends BaseService {
     }
 
     // 2. Xử lý User (Account)
-    if (userData) {
+    const shouldSyncNameToUser = Boolean(employee.user && employeeData.name);
+    const nextUserData = userData ? { ...userData } : {};
+    if (shouldSyncNameToUser && !nextUserData.name) {
+      nextUserData.name = employeeData.name;
+    }
+
+    if (userData || shouldSyncNameToUser) {
       // TRƯỜNG HỢP A: Đã có User liên kết -> Update User đó
       if (employee.user) {
         // Check trùng email (trừ chính user này ra)
-        if (userData.email) {
-          const isEmailTaken = await User.isEmailTaken(userData.email, employee.user);
+        if (nextUserData.email) {
+          const isEmailTaken = await User.isEmailTaken(nextUserData.email, employee.user);
           if (isEmailTaken) {
             throw new ApiError(BAD_REQUEST, 'Email đã được sử dụng');
           }
         }
-        await User.findByIdAndUpdate(employee.user, userData);
+        await User.findByIdAndUpdate(employee.user, nextUserData);
       }
       // TRƯỜNG HỢP B: Chưa có User -> Tạo mới User và Link vào
       else {
+        if (!userData) {
+          throw new ApiError(BAD_REQUEST, 'Thiếu thông tin tài khoản để tạo user mới');
+        }
+
         // Check trùng email (không cần trừ ai cả vì là tạo mới)
-        const isEmailTaken = await User.isEmailTaken(userData.email);
+        const isEmailTaken = await User.isEmailTaken(nextUserData.email);
         if (isEmailTaken) {
           throw new ApiError(BAD_REQUEST, 'Email đã được sử dụng');
         }
 
         // Tạo User mới
         const newUserPayload = {
-          ...userData,
+          ...nextUserData,
         };
 
         const newUser = await User.create(newUserPayload);

@@ -1,6 +1,6 @@
 const httpStatus = require('http-status');
 const BaseController = require('../utils/_base.controller');
-const { customerService, employeeService } = require('../services');
+const { customerService, employeeService, userService } = require('../services');
 const catchAsync = require('../utils/catchAsync');
 
 const { OK } = httpStatus;
@@ -15,12 +15,25 @@ class CustomerController extends BaseController {
 
   async updateProfile(req, res) {
     const { profileType, user, body } = req;
+    const userId = user._id || user.id;
+
+    const userPatch = {};
+    if (typeof body.name === 'string' && body.name.trim()) {
+      userPatch.name = body.name.trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(body, 'avatar')) {
+      userPatch.avatar = body.avatar || null;
+    }
+
+    if (Object.keys(userPatch).length > 0) {
+      await userService.updateOne({ _id: userId }, { $set: userPatch });
+    }
 
     let newData;
     if (profileType === 'Customer') {
       newData = await this.service.updateOne(
         {
-          user: user._id || user.id,
+          user: userId,
         },
         {
           $set: body,
@@ -29,7 +42,7 @@ class CustomerController extends BaseController {
     } else {
       newData = await employeeService.updateOne(
         {
-          user: user._id || user.id,
+          user: userId,
         },
         {
           $set: body,

@@ -32,7 +32,7 @@ const register = async (subdomain, userBody) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email đã được sử dụng');
   }
 
-  const { email, phone, password, referralCode } = userBody;
+  const { email, phone, password, referralCode, name, avatar } = userBody;
 
   const isAdmin = subdomain === 'admin';
   const role = isAdmin ? 'admin' : 'customer';
@@ -59,6 +59,8 @@ const register = async (subdomain, userBody) => {
   try {
     // 3. Tạo User (KHÔNG profile, KHÔNG referral)
     newUser = await userService.create({
+      name,
+      avatar: avatar || null,
       email,
       phone,
       password,

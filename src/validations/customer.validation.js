@@ -89,6 +89,7 @@ const updateById = {
 const updateProfile = {
   body: Joi.object({
     name: Joi.string().trim(),
+    avatar: Joi.string().trim().allow('', null),
     gender: Joi.string().valid('male', 'female', 'other'),
     birthDate: Joi.date(),
     emails: Joi.array().items(emailSchema),
